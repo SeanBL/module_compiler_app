@@ -1,0 +1,119 @@
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Landscape side nav (LEFT COLUMN) -->
+    <aside id="navigation-landscape" class="nav-shell" data-nav-root>
+
+      <div class="l-top">
+        <button type="button" data-nav="menu" class="nav-btn menu-btn">☰</button>
+        <button type="button" data-nav="prev" class="nav-btn blue-btn">‹ Prev</button>
+        <button type="button" data-nav="next" class="nav-btn blue-btn">Next ›</button>
+      </div>
+
+      <div class="l-middle">
+        <div class="progress-bar vertical">
+          <div class="progress-fill" data-role="progress-fill"></div>
+        </div>
+        <span class="slide-counter" data-role="counter"></span>
+      </div>
+
+      <div class="l-bottom">
+        <button type="button" data-nav="exit" class="nav-btn exit-btn">Exit</button>
+      </div>
+
+    </aside>
+
+    <!-- ✅ NEW WRAPPER -->
+    <div id="main-column">
+
+      <header id="module-header">
+        <div class="header-text">
+          <div id="module-title"></div>
+          <div class="header-org">WiRED International</div>
+        </div>
+      </header>
+
+      <main id="slide-container">
+        <!-- Slides render here -->
+      </main>
+
+      <!-- Portrait bottom nav -->
+      <footer id="navigation-portrait" class="nav-shell" data-nav-root>
+
+        <div class="p-left">
+          <button type="button" data-nav="menu" class="nav-btn menu-btn">☰</button>
+          <button type="button" data-nav="exit" class="nav-btn exit-btn">Exit</button>
+        </div>
+
+        <div class="p-center">
+          <span class="slide-counter" data-role="counter"></span>
+          <div class="progress-bar horizontal">
+            <div class="progress-fill" data-role="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="p-right">
+          <button type="button" data-nav="prev" class="nav-btn blue-btn">‹ Prev</button>
+          <button type="button" data-nav="next" class="nav-btn blue-btn">Next ›</button>
+        </div>
+
+      </footer>
+
+    </div>
+
+  </div>
+
+  <!-- Overlay Drawer -->
+  <div id="drawer-overlay">
+    <div id="drawer">
+      <div class="drawer-header">
+        <button id="drawer-close">✕</button>
+      </div>
+
+      <div class="drawer-tabs">
+        <button id="tab-menu" class="active">Menu</button>
+        <button id="tab-resources">Resources</button>
+      </div>
+
+      <div id="drawer-content">
+        <!-- Slide list OR Resources list rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <div id="resume-overlay">
+    <div id="resume-modal">
+      <h2>Resume Module?</h2>
+      <p>You previously started this module.</p>
+      <div class="resume-actions">
+        <button id="resume-continue">Continue</button>
+        <button id="resume-restart">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-viewer-overlay">
+    <button id="image-viewer-close" type="button" aria-label="Close image viewer">✕</button>
+    <img id="image-viewer-img" alt="Expanded module image">
+  </div>
+
+  <script src="runtime_state.js"></script>
+
+  <script src="runtime_quiz.js"></script>
+  <script src="runtime_engage.js"></script>
+  <script src="runtime_drawer.js"></script>
+  <script src="runtime_resume.js"></script>
+
+  <script src="runtime_bridge.js"></script>
+
+  <script src="runtime_core.js"></script>
+  <script src="runtime.js"></script>
+</body>
