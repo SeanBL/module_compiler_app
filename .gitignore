@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env/
+
+# Flask
+instance/
+.webassets-cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+work/uploads/
+work/builds/
+work/temp/
+
+# PyInstaller (future)
+dist/
+build/
+*.spec
+
+# Logs
+*.log
+
+# Compiler data
+healthmap_module_compiler/data/exports/
+healthmap_module_compiler/data/raw/
+
+# Optional safety (if temp files appear)
+healthmap_module_compiler/data/tmp/
+healthmap_module_compiler/data/temp/

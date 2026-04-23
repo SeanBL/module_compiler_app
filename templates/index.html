@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Module Compiler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <header class="header">
+        <h1>Module Compiler</h1>
+        <p>Upload a Word document and build a packaged module.</p>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="messages">
+            {% for category, message in messages %}
+              <div class="message {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('build_module') }}" method="post" enctype="multipart/form-data" class="build-form">
+        <label for="docx_file" class="label">Word document (.docx)</label>
+        <input type="file" id="docx_file" name="docx_file" accept=".docx" required>
+        <div id="selected-file" class="selected-file">No file selected</div>
+
+        <div class="button-row">
+          <button type="submit" class="primary-btn">Build Module</button>
+        </div>
+      </form>
+
+      {% if build_success %}
+        <section class="results">
+          <h2>Build Complete</h2>
+          <p>Your module was compiled successfully.</p>
+
+          <div class="button-row">
+            <a class="secondary-btn" href="{{ url_for('preview_module', build_id=build_id) }}" target="_blank">
+              Preview Module
+            </a>
+            <a class="secondary-btn" href="{{ url_for('download_build', build_id=build_id) }}">
+              Download ZIP
+            </a>
+          </div>
+
+          <p class="note">
+            Preview opens the built module in a browser tab so the user can experience it like the final product.
+          </p>
+        </section>
+      {% endif %}
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
