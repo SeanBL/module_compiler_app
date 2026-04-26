@@ -1,0 +1,5 @@
+{
+  "python.analysis.extraPaths": [
+    "./healthmap_module_compiler/src"
+  ]
+}

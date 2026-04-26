@@ -3,18 +3,29 @@ import uuid
 import shutil
 import sys
 
-# IMPORTANT: add compiler src to path
 BASE_DIR = Path(__file__).resolve().parent
 COMPILER_ROOT = BASE_DIR / "healthmap_module_compiler"
 SRC_PATH = COMPILER_ROOT / "src"
 
 sys.path.insert(0, str(SRC_PATH))
 
-# now import your compiler
 from module_compiler.compile_module import compile_module
+import time
 
+def cleanup_old_builds(builds_root: Path, max_age_hours: int = 24):
+    now = time.time()
+
+    for build in builds_root.iterdir():
+        if not build.is_dir():
+            continue
+
+        age = now - build.stat().st_mtime
+
+        if age > max_age_hours * 3600:
+            shutil.rmtree(build, ignore_errors=True)
 
 def run_compiler_pipeline(input_docx: Path, builds_root: Path) -> dict:
+    cleanup_old_builds(builds_root)
     build_id = uuid.uuid4().hex[:8]
 
     build_dir = builds_root / build_id

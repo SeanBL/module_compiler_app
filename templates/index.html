@@ -25,13 +25,34 @@
       {% endwith %}
 
       <form action="{{ url_for('build_module') }}" method="post" enctype="multipart/form-data" class="build-form">
-        <label for="docx_file" class="label">Word document (.docx)</label>
-        <input type="file" id="docx_file" name="docx_file" accept=".docx" required>
+        <label for="zip_file" class="label">Module package (.zip)</label>
+        <div id="drop-zone" class="drop-zone">
+          <p class="drop-text">📦 Drag & drop your module ZIP here</p>
+          <p class="drop-subtext">or click to browse</p>
+          <input type="file" id="zip_file" name="zip_file" accept=".zip" required hidden>
+        </div>
+
+        <div class="note">
+          Your ZIP must contain:
+          <ul>
+            <li>One .docx file</li>
+            <li>An <strong>assets/</strong> folder (images)</li>
+            <li>An optional <strong>resources/</strong> folder (PDFs)</li>
+          </ul>
+        </div>
         <div id="selected-file" class="selected-file">No file selected</div>
 
         <div class="button-row">
           <button type="submit" class="primary-btn">Build Module</button>
         </div>
+
+        <div id="upload-progress-container" class="progress-container" style="display:none;">
+          <div class="progress-bar">
+            <div id="upload-progress-bar" class="progress-fill"></div>
+          </div>
+          <div id="upload-progress-text" class="progress-text">Uploading...</div>
+        </div>
+
       </form>
 
       {% if build_success %}

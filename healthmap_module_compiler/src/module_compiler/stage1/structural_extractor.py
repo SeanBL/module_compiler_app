@@ -53,17 +53,18 @@ def is_list_paragraph(p) -> bool:
 
 
 def canonical_col_label(raw: str) -> str:
-    t = normalize(raw).lower()
+    t = normalize(raw).lower().strip()
+
     if "/" in t:
         t = t.split("/", 1)[0].strip()
 
-    if t.startswith("notes and instructions"):
+    if "notes" in t:
         return "notes"
-    if t.startswith("english text"):
+    if "english" in t:
         return "english"
-    if t.startswith("image"):
+    if "image" in t:
         return "image"
-    if t.startswith("button labels"):
+    if "button" in t:
         return "button_labels"
 
     return t
@@ -98,6 +99,25 @@ def extract_quiz_scope(marker: str) -> str:
         return "application"
 
     return "inline"
+
+def starts_numbered_engage_section(blocks: List[Block]) -> bool:
+    if not blocks:
+        return False
+
+    first = blocks[0]
+
+    if not isinstance(first, ParagraphBlock):
+        return False
+
+    text = first.text.strip()
+
+    # Handles: 1. Text, 2. Text, etc.
+    return (
+        len(text) >= 3
+        and text[0].isdigit()
+        and text[1] == "."
+        and text[2].isspace()
+    )
 
 def extract_module_metadata(doc) -> dict:
     module_title = None
@@ -218,6 +238,43 @@ def extract_cell_blocks(cell) -> List[Block]:
         print("🔍 DEBUG TARGET BLOCKS:", blocks)
     return blocks
 
+def finalize_engage1_slide(slide: RawSlide, pending_button_labels: List[str]) -> None:
+    if not pending_button_labels:
+        raise ValueError(
+            f"Engage1 slide {slide.slide_id} has no buttons"
+        )
+
+    if not slide.body or not any(
+        isinstance(block, (ParagraphBlock, BulletsBlock))
+        for section in slide.body
+        for block in section
+    ):
+        raise ValueError(
+            f"Engage1 slide {slide.slide_id} has no content blocks"
+        )
+
+    sections = slide.body
+    intro = sections[0]
+    groups = sections[1:]
+
+    if len(groups) != len(pending_button_labels):
+        raise ValueError(
+            f"Engage1 slide {slide.slide_id} has {len(groups)} sections but {len(pending_button_labels)} buttons."
+        )
+
+    slide.engage1_items = [
+        RawEngage1Item(
+            label=label,
+            body=group,
+            image=None
+        )
+        for label, group in zip(pending_button_labels, groups)
+    ]
+
+    slide.engage1_intro = intro
+    slide.engage1_intro_image = getattr(intro[0], "image", None)
+    slide.body = None
+
 # --------------------------------------------------
 # Structural Extraction
 # --------------------------------------------------
@@ -264,6 +321,13 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                 # Properly finalize previous slide first
                 if current_slide is not None:
+
+                    if current_slide.slide_type == "engage1":
+                        finalize_engage1_slide(current_slide, pending_button_labels)
+
+                        # 🔥 CRITICAL RESET
+                        pending_button_labels = []
+                        current_slide.body = None
 
                     if current_slide.slide_type == "quiz":
                         current_slide.quiz_questions = quiz_questions
@@ -322,52 +386,38 @@ def extract_raw_slides(docx_path: Path) -> dict:
                             )
 
                         if not current_slide.body or not any(
-                            isinstance(b, (ParagraphBlock, BulletsBlock))
-                            for b in current_slide.body
+                            isinstance(block, (ParagraphBlock, BulletsBlock))
+                            for section in current_slide.body
+                            for block in section
                         ):
                             raise ValueError(
                                 f"Engage1 slide {current_slide.slide_id} has no content blocks"
                             )
 
-                        blocks = current_slide.body
+                        sections = current_slide.body
 
-                        expanded_blocks = []
+                        intro = sections[0]
+                        groups = sections[1:]
 
-                        for b in current_slide.body:
-                            if isinstance(b, BulletsBlock):
-                                # Split bullets into individual paragraph blocks
-                                for item in b.items:
-                                    expanded_blocks.append(
-                                        ParagraphBlock(type="paragraph", text=item)
-                                    )
-                            else:
-                                expanded_blocks.append(b)
-
-                        blocks = expanded_blocks
-
-                        # First block becomes intro (NOT just paragraph)
-                        intro = blocks[0]
-                        content_blocks = blocks[1:]
-
-                        if len(content_blocks) != len(pending_button_labels):
+                        if len(groups) != len(pending_button_labels):
                             raise ValueError(
-                                f"Engage1 slide {current_slide.slide_id} paragraph/button mismatch"
+                                f"Engage1 slide {current_slide.slide_id} has {len(groups)} sections but {len(pending_button_labels)} buttons."
                             )
 
                         engage1_items = []
 
-                        for label, block in zip(pending_button_labels, content_blocks):
+                        for label, group in zip(pending_button_labels, groups):
                             engage1_items.append(
                                 RawEngage1Item(
                                     label=label,
-                                    body=[block],   # ✅ now supports bullets too
-                                    image=getattr(block, "image", None),
+                                    body=group,
+                                    image=None
                                 )
                             )
 
                         current_slide.engage1_items = engage1_items
-                        current_slide.engage1_intro = [intro]
-                        current_slide.engage1_intro_image = getattr(intro, "image", None)
+                        current_slide.engage1_intro = intro
+                        current_slide.engage1_intro_image = getattr(intro[0], "image", None)
                         current_slide.body = None
 
                     if current_slide.slide_type == "engage2":
@@ -430,6 +480,8 @@ def extract_raw_slides(docx_path: Path) -> dict:
                 col_labels = [
                     canonical_col_label(c.text) for c in label_row.cells
                 ]
+
+                print("DEBUG COL LABELS:", col_labels)
 
                 row_idx += 2
                 continue
@@ -570,7 +622,7 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                 row_has_button = any(
                     isinstance(block, ParagraphBlock)
-                    and block.text.lower().startswith("[button]")
+                    and block.text.strip().lower().startswith("[button]")
                     for block in english
                 )
 
@@ -579,23 +631,39 @@ def extract_raw_slides(docx_path: Path) -> dict:
                     for block in english:
                         if isinstance(block, ParagraphBlock):
                             text = block.text.strip()
-                            if text.lower().startswith("[button]"):
+                            if text.strip().lower().startswith("[button]"):
                                 label = text[8:].strip()
                                 pending_button_labels.append(label)
 
                 # Content row
                 else:
-                    blocks = current_slide.body or []
+                    sections = current_slide.body or []
+
+                    section_blocks = []
 
                     for block in english:
                         if isinstance(block, ParagraphBlock):
                             if image:
                                 block.image = image[0]
-                            blocks.append(block)
+                            section_blocks.append(block)
                         else:
-                            blocks.append(block)
+                            section_blocks.append(block)
 
-                    current_slide.body = blocks
+                    has_numbered_sections = any(
+                        starts_numbered_engage_section(section)
+                        for section in sections[1:]  # skip intro
+                    )
+
+                    current_row_starts_numbered_section = starts_numbered_engage_section(section_blocks)
+
+                    if current_row_starts_numbered_section:
+                        sections.append(section_blocks)
+                    elif has_numbered_sections and len(sections) > 1:
+                        sections[-1].extend(section_blocks)
+                    else:
+                        sections.append(section_blocks)
+
+                    current_slide.body = sections
 
             # -----------------------------
             # ENGAGE2 PARSING
@@ -654,6 +722,48 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
     # finalize last slide
     if current_slide is not None:
+
+        if current_slide.slide_type == "engage1":
+
+            if not pending_button_labels:
+                raise ValueError(
+                    f"Engage1 slide {current_slide.slide_id} has no buttons"
+                )
+
+            if not current_slide.body or not any(
+                isinstance(block, (ParagraphBlock, BulletsBlock))
+                for section in current_slide.body
+                for block in section
+            ):
+                raise ValueError(
+                    f"Engage1 slide {current_slide.slide_id} has no content blocks"
+                )
+
+            sections = current_slide.body
+
+            intro = sections[0]
+            groups = sections[1:]
+
+            if len(groups) != len(pending_button_labels):
+                raise ValueError(
+                    f"Engage1 slide {current_slide.slide_id} has {len(groups)} sections but {len(pending_button_labels)} buttons."
+                )
+
+            engage1_items = []
+
+            for label, group in zip(pending_button_labels, groups):
+                engage1_items.append(
+                    RawEngage1Item(
+                        label=label,
+                        body=group,
+                        image=None
+                    )
+                )
+
+            current_slide.engage1_items = engage1_items
+            current_slide.engage1_intro = intro
+            current_slide.engage1_intro_image = getattr(intro[0], "image", None)
+            current_slide.body = None
 
         if current_slide.slide_type == "engage2":
 

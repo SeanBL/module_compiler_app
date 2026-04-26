@@ -1668,3 +1668,7 @@ li {
   }
 
 }
+
+.processing .progress-fill {
+  opacity: 0.6;
+}

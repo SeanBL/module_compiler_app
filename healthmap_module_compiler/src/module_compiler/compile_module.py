@@ -87,6 +87,7 @@ def compile_module(input_path: Path, output_path: Path) -> None:
 
 def normalize_filename(name: str) -> str:
     name = name.strip().lower()
+    name = name.replace("&", "and")
     name = re.sub(r"\s+", "-", name)
     name = re.sub(r"[^a-z0-9\-_.]", "", name)
     return name
@@ -205,6 +206,7 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
     # --------------------------------------------------
 
     used_images = collect_image_references(module)
+    missing_assets = []
 
     # Build case-insensitive lookup
     source_files = list(assets_source_dir.iterdir())
@@ -212,7 +214,7 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 
     for p in source_files:
         if p.is_file():
-            key = p.stem.lower()
+            key = normalize_filename(p.stem)
             if key in asset_lookup:
                 print(f"⚠️ WARNING: Duplicate asset stem detected: {p.stem}")
             asset_lookup[key] = p
@@ -221,16 +223,11 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 
     for img_name in used_images:
 
-        key = img_name.lower()
+        key = normalize_filename(img_name)
 
         if key not in asset_lookup:
-            msg = f"Missing asset: '{img_name}'"
-
-            if STRICT_ASSET_MODE:
-                raise RuntimeError(f"❌ {msg}")
-            else:
-                print(f"⚠️ WARNING: {msg}")
-                continue
+            missing_assets.append(img_name)
+            continue
 
         source_path = asset_lookup[key]
 
@@ -258,6 +255,12 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
             shutil.copy(source_path, target_path)
 
             filename_map[img_name] = normalized_name
+
+    if missing_assets:
+        missing_assets_sorted = sorted(set(missing_assets))
+        raise RuntimeError(
+            "❌ Missing assets:\n" + "\n".join(f"- {a}" for a in missing_assets_sorted)
+        )
 
     # --------------------------------------------------
     # 🔹 Update module object with normalized filenames
