@@ -37,20 +37,24 @@ const RuntimeState = window.RuntimeState = {
 };
 
 function storageKey() {
-  return `healthmap_runtime::${RuntimeState.moduleId || "unknown"}`;
+  if (!RuntimeState.moduleId) return null;
+  return `healthmap_runtime::${RuntimeState.moduleId}`;
 }
 
 function loadProgress() {
   try {
-    const raw = localStorage.getItem(storageKey());
+    const key = storageKey();
+    if (!key) return;
+
+    const raw = localStorage.getItem(key);
     if (!raw) return;
+
     const saved = JSON.parse(raw);
 
     if (typeof saved.currentIndex === "number") RuntimeState.currentIndex = saved.currentIndex;
-    if (typeof saved.finalCursor === "number") {
-      RuntimeState.finalCursor = saved.finalCursor;
-    }
+    if (typeof saved.finalCursor === "number") RuntimeState.finalCursor = saved.finalCursor;
     if (saved.quizState) RuntimeState.quizState = saved.quizState;
+
     if (saved.final) {
       RuntimeState.final = {
         ...RuntimeState.final,
@@ -67,15 +71,18 @@ function loadProgress() {
 
 function saveProgress() {
   try {
+    const key = storageKey();
+    if (!key) return;
+
     const payload = {
       currentIndex: RuntimeState.currentIndex,
       finalCursor: RuntimeState.finalCursor,
       quizState: RuntimeState.quizState,
       final: RuntimeState.final,
-
       engageState: RuntimeState.engageState
     };
-    localStorage.setItem(storageKey(), JSON.stringify(payload));
+
+    localStorage.setItem(key, JSON.stringify(payload));
   } catch (e) {
     console.warn("Progress save failed:", e);
   }

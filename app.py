@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import sys
 from pathlib import Path
 from flask import (
     Flask,
@@ -19,30 +19,67 @@ import tempfile
 import shutil
 import webbrowser
 import threading
+import mammoth
 
 
-BASE_DIR = Path(__file__).resolve().parent
+
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent
+
+# -----------------------------
+# Base paths
+# -----------------------------
+BASE_DIR = get_base_path()
+
+if getattr(sys, 'frozen', False):
+    RUNTIME_BASE = Path(tempfile.gettempdir()) / "module_compiler_runtime"
+else:
+    RUNTIME_BASE = BASE_DIR
+
+RUNTIME_BASE.mkdir(parents=True, exist_ok=True)
+(Path(tempfile.gettempdir()) / "data" / "assets").mkdir(parents=True, exist_ok=True)
+
 COMPILER_ROOT = BASE_DIR / "healthmap_module_compiler"
-UPLOAD_DIR = BASE_DIR / "work" / "uploads"
-BUILD_DIR = BASE_DIR / "work" / "builds"
-TEMP_DIR = BASE_DIR / "work" / "temp"
 
-ALLOWED_EXTENSIONS = {".docx"}
+UPLOAD_DIR = RUNTIME_BASE / "uploads"
+BUILD_DIR = RUNTIME_BASE / "builds"
+TEMP_DIR = RUNTIME_BASE / "temp"
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 BUILD_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_EXTENSIONS = {".docx"}
 
+# -----------------------------
+# Flask paths (READ from MEIPASS)
+# -----------------------------
+if getattr(sys, 'frozen', False):
+    FLASK_BASE = Path(sys._MEIPASS)
+else:
+    FLASK_BASE = BASE_DIR
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=str(FLASK_BASE / "templates"),
+    static_folder=str(FLASK_BASE / "static"),
+)
+
 app.secret_key = "replace-this-with-a-real-secret-key"
+
 
 def inject_assets(temp_path: Path):
     """
     Copies extracted assets into compiler's expected data/assets folder.
     Returns backup path so we can restore later.
     """
-    assets_target = COMPILER_ROOT / "data" / "assets"
+    if getattr(sys, 'frozen', False):
+        assets_target = Path(tempfile.gettempdir()) / "data" / "assets"
+    else:
+        assets_target = COMPILER_ROOT / "data" / "assets"
+
+    assets_target.mkdir(parents=True, exist_ok=True)
 
     backup_dir = None
 
@@ -136,6 +173,40 @@ def build_module():
 
             docx_path = docx_files[0]
 
+            # -----------------------------
+            # Copy /resources → compiler raw resources
+            # -----------------------------
+            resource_dirs = list(temp_path.rglob("resources"))
+
+            if resource_dirs:
+                root_resources = resource_dirs[0]
+                module_name = docx_path.stem
+
+                raw_resources_target = (
+                    COMPILER_ROOT
+                    / "data"
+                    / "raw"
+                    / "resources"
+                    / module_name
+                )
+
+                print("\n=== VERIFY RAW RESOURCE COPY ===")
+                print("FOUND RESOURCES AT:", root_resources)
+                print("TARGET:", raw_resources_target)
+
+                if raw_resources_target.exists():
+                    shutil.rmtree(raw_resources_target)
+
+                raw_resources_target.mkdir(parents=True, exist_ok=True)
+
+                shutil.copytree(root_resources, raw_resources_target, dirs_exist_ok=True)
+
+                print("FILES COPIED:", list(raw_resources_target.iterdir()))
+                print("================================\n")
+
+            else:
+                print("⚠️ No /resources folder found anywhere in ZIP")
+
             # Step 4: Inject assets into compiler environment
             assets_target = None
             backup_dir = None
@@ -159,13 +230,24 @@ def build_module():
             return render_template(
                 "index.html",
                 build_success=True,
-                build_id=result["build_id"]
+                build_id=result["build_id"],
+                annotated_available=True
             )
 
     except Exception as exc:
-        flash(f"Build failed: {exc}", "error")
-        return redirect(url_for("index"))
+        # try to locate latest build folder
+        latest_build = max(BUILD_DIR.iterdir(), key=lambda p: p.stat().st_mtime, default=None)
 
+        build_id = latest_build.name if latest_build else None
+
+        flash(f"Build failed: {exc}", "error")
+
+        return render_template(
+            "index.html",
+            build_failed=True,
+            build_id=build_id,
+            annotated_available=True
+        )
 
 @app.route("/download/<build_id>", methods=["GET"])
 def download_build(build_id: str):
@@ -193,6 +275,43 @@ def preview_assets(build_id: str, filename: str):
     output_dir = BUILD_DIR / build_id / "module_output"
     return send_from_directory(output_dir, filename)
 
+@app.route("/download-annotated/<build_id>")
+def download_annotated(build_id):
+    build_dir = BUILD_DIR / build_id
+    doc_path = next(build_dir.glob("*_ANNOTATED.docx"), None)
+
+    if not doc_path:
+        flash("Annotated document not found.", "error")
+        return redirect(url_for("index"))
+
+    return send_file(doc_path, as_attachment=True)
+
+@app.route("/preview-annotated/<build_id>")
+def preview_annotated(build_id):
+    build_dir = BUILD_DIR / build_id
+    doc_path = next(build_dir.glob("*_ANNOTATED.docx"), None)
+
+    if not doc_path:
+        flash("Annotated document not found.", "error")
+        return redirect(url_for("index"))
+
+    with open(doc_path, "rb") as docx_file:
+        result = mammoth.convert_to_html(docx_file)
+        html = result.value
+
+    return f"""
+    <html>
+    <head>
+        <title>Annotated Preview</title>
+        <style>
+            body {{ font-family: Arial; padding: 20px; }}
+        </style>
+    </head>
+    <body>
+        {html}
+    </body>
+    </html>
+    """
 
 if __name__ == "__main__":
     def open_browser():

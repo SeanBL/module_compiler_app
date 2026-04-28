@@ -24,6 +24,23 @@
         {% endif %}
       {% endwith %}
 
+      {% if build_failed and build_id %}
+      <section class="results">
+        <h2>Fix Required</h2>
+        <p>Please review the annotated document to locate the issue.</p>
+
+        <div class="button-row">
+          <a class="secondary-btn" href="{{ url_for('preview_annotated', build_id=build_id) }}" target="_blank">
+            Preview Annotated Doc
+          </a>
+
+          <a class="secondary-btn" href="{{ url_for('download_annotated', build_id=build_id) }}">
+            Download Annotated Doc
+          </a>
+        </div>
+      </section>
+      {% endif %}
+
       <form action="{{ url_for('build_module') }}" method="post" enctype="multipart/form-data" class="build-form">
         <label for="zip_file" class="label">Module package (.zip)</label>
         <div id="drop-zone" class="drop-zone">
@@ -64,8 +81,17 @@
             <a class="secondary-btn" href="{{ url_for('preview_module', build_id=build_id) }}" target="_blank">
               Preview Module
             </a>
+
             <a class="secondary-btn" href="{{ url_for('download_build', build_id=build_id) }}">
               Download ZIP
+            </a>
+
+            <a class="secondary-btn" href="{{ url_for('preview_annotated', build_id=build_id) }}" target="_blank">
+              Preview Annotated Doc
+            </a>
+
+            <a class="secondary-btn" href="{{ url_for('download_annotated', build_id=build_id) }}">
+              Download Annotated Doc
             </a>
           </div>
 

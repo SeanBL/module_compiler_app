@@ -4,23 +4,63 @@ import json
 from pathlib import Path
 import argparse
 import shutil
+import re
 
 from .stage1.structural_extractor import extract_raw_slides
 from .stage2.normalize import normalize_slides
 from .stage2_5.final_quiz_builder import build_final_quiz
 from .runtime_builder import build_module
 from .utils.image_utils import convert_to_webp
+from .utils.annotate_doc import generate_annotated_doc
 
 STRICT_ASSET_MODE = True  # Fail-fast if asset missing
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+BUILD_ROOT = PROJECT_ROOT / "work" / "builds"
 
+def extract_slide_id_from_error(msg: str) -> str | None:
+    match = re.search(r"(slide_\d{3})", msg)
+    return match.group(1) if match else None
 
-def compile_module(input_path: Path, output_path: Path) -> None:
-    # Step 1: Structural extraction
-    stage1_output = extract_raw_slides(input_path)
+def compile_module(input_path: Path, output_path: Path, build_dir: Path | None = None) -> None:
+    if build_dir:
+        annotated_doc_path = build_dir / f"{input_path.stem}_ANNOTATED.docx"
+    else:
+        annotated_doc_path = output_path.parent / f"{input_path.stem}_ANNOTATED.docx"
+
+    error_slide_id = None
+
+    try:
+        stage1_output = extract_raw_slides(input_path)
+    except Exception as e:
+        error_slide_id = extract_slide_id_from_error(str(e))
+
+        generate_annotated_doc(
+            input_path,
+            annotated_doc_path,
+            error_slide_id=error_slide_id
+        )
+
+        raise RuntimeError(
+            f"{str(e)}\n\n👉 See annotated document below."
+        )
+
+    # ✅ ALWAYS generate annotated doc on success (no highlight)
+    generate_annotated_doc(
+        input_path,
+        annotated_doc_path,
+        error_slide_id=None
+    )
+
     raw_slides = stage1_output["slides"]
 
     # Step 2: Normalize (Stage 2)
-    normalized_slides = normalize_slides(raw_slides)
+    try:
+        normalized_slides = normalize_slides(raw_slides)
+    except Exception as e:
+        raise RuntimeError(
+            f"{str(e)}\n\n"
+            f"👉 See annotated document:\n{annotated_doc_path}"
+        )
 
     # Debug counts
     print(f"Stage 1 slides: {len(raw_slides)}")

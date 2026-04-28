@@ -3,6 +3,17 @@
 // Initialization
 // -------------------------
 
+function loadModule() {
+  const data = loadLocalJSON("module.json");
+
+  RuntimeState.moduleId = data.module_id || 0;
+  RuntimeState.title = data.module_title || "Module";
+
+  RuntimeState.resources = data.resources || [];
+
+  RuntimeState.slides = data.slides || [];
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadModule();
   setupNavigation();
@@ -71,10 +82,3 @@ document.addEventListener("pointercancel", (e) => {
     e.target.classList.remove("pressed");
   }
 });
-
-RuntimeState.resources = [
-  {
-    title: "PHCFM PDF",
-    file: "PHCFM-15-3204.pdf"
-  }
-];

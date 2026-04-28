@@ -239,27 +239,36 @@ def extract_cell_blocks(cell) -> List[Block]:
     return blocks
 
 def finalize_engage1_slide(slide: RawSlide, pending_button_labels: List[str]) -> None:
-    if not pending_button_labels:
-        raise ValueError(
-            f"Engage1 slide {slide.slide_id} has no buttons"
+    header = slide.header or "UNKNOWN HEADER"
+
+    def format_error(msg: str) -> ValueError:
+        buttons = ", ".join(pending_button_labels) if pending_button_labels else "NONE"
+
+        return ValueError(
+            f"\n🚨 Engage1 Error\n"
+            f"Slide: {slide.slide_id}\n"
+            f"Header: {header}\n"
+            f"Buttons: {buttons}\n"
+            f"{msg}\n"
         )
+
+    if not pending_button_labels:
+        raise format_error("No buttons found")
 
     if not slide.body or not any(
         isinstance(block, (ParagraphBlock, BulletsBlock))
         for section in slide.body
         for block in section
     ):
-        raise ValueError(
-            f"Engage1 slide {slide.slide_id} has no content blocks"
-        )
+        raise format_error("No content blocks found")
 
     sections = slide.body
     intro = sections[0]
     groups = sections[1:]
 
     if len(groups) != len(pending_button_labels):
-        raise ValueError(
-            f"Engage1 slide {slide.slide_id} has {len(groups)} sections but {len(pending_button_labels)} buttons."
+        raise format_error(
+            f"Mismatch → Sections: {len(groups)} | Buttons: {len(pending_button_labels)}"
         )
 
     slide.engage1_items = [
@@ -800,5 +809,8 @@ def extract_raw_slides(docx_path: Path) -> dict:
         "module_id": metadata["module_id"],
         "slides": slides
     }
+
+    
+
 
     
