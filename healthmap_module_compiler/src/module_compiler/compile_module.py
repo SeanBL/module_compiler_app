@@ -273,10 +273,12 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 
         ext = source_path.suffix.lower()
 
-        SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
+        SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 
         if ext not in SUPPORTED_IMAGE_EXTENSIONS:
             continue
+        
+        print(f"[Asset] Processing: {source_path.name} (ext={ext})")
 
         # Convert to WebP if needed
         if ext != ".webp":

@@ -50,16 +50,22 @@ const MODULE_THEMES = [
 function getThemeForModule(moduleId) {
   const themes = MODULE_THEMES;
 
-  const numericId = Number(moduleId);
+  const numericId = parseInt(moduleId, 10);
 
   if (Number.isFinite(numericId)) {
     return themes[Math.abs(numericId) % themes.length];
   }
 
+  console.warn("⚠️ Invalid moduleId for theme:", moduleId);
   return themes[0];
 }
 
 function applyModuleTheme(theme) {
+  if (!theme) {
+    console.error("❌ Theme is undefined — using fallback");
+    theme = MODULE_THEMES[0];
+  }
+
   const root = document.documentElement;
 
   root.style.setProperty("--engage-btn-bg", theme.bg);
@@ -82,33 +88,6 @@ function loadLocalJSON(path) {
     return JSON.parse(xhr.responseText);
   } else {
     throw new Error("Failed to load JSON");
-  }
-}
-
-function loadModule() {
-  try {
-    const data = loadLocalJSON("module.json");
-    console.log("MODULE JSON:", data);
-    RuntimeState.moduleId = data.module_id || data.moduleId || null;
-    RuntimeState.title = data.module_title || "HealthMAP Module";
-    RuntimeState.slides = data.slides || [];
-    RuntimeState.resources = data.resources || [];
-
-    // -------------------------
-    // Apply Theme (Phase 3)
-    // -------------------------
-    const theme = getThemeForModule(RuntimeState.moduleId);
-    applyModuleTheme(theme);
-
-    buildFinalQuizIndex();
-
-    document.getElementById("module-title").textContent = RuntimeState.title;
-
-    // Load saved progress AFTER moduleId is known
-    if (RuntimeState.moduleId) loadProgress();
-
-  } catch (err) {
-    console.error("Failed to load module:", err);
   }
 }
 
@@ -531,6 +510,7 @@ async function renderContentBlock({
   alt = ""
 }) {
   console.log("🚨 NEW renderContentBlock version running");
+  console.log("🚨 TEST CHANGE WORKED");
   // 🔥 OUTER CONTAINER (THIS controls layout)
   const container = document.createElement("div");
   container.className = "panel-content";
@@ -558,11 +538,12 @@ async function renderContentBlock({
       btn.textContent = `📄 ${label}`;
       btn.target = "_blank";
 
+      const rootStyles = getComputedStyle(document.documentElement);
       // Theme styling
       btn.style.padding = "0.75rem 1rem";
-      btn.style.background = "var(--engage-btn-bg)";
-      btn.style.color = "var(--engage-btn-text)";
-      btn.style.border = "1px solid var(--engage-btn-border)";
+      btn.style.background = rootStyles.getPropertyValue("--engage-btn-bg");
+      btn.style.color = rootStyles.getPropertyValue("--engage-btn-text");
+      btn.style.border = `1px solid ${rootStyles.getPropertyValue("--engage-btn-border")}`;
       btn.style.borderRadius = "8px";
       btn.style.textDecoration = "none";
       btn.style.fontWeight = "500";
@@ -570,11 +551,11 @@ async function renderContentBlock({
       btn.style.cursor = "pointer";
 
       btn.addEventListener("mouseenter", () => {
-        btn.style.background = "var(--engage-btn-bg-hover)";
+        btn.style.background = rootStyles.getPropertyValue("--engage-btn-bg-hover");
       });
 
       btn.addEventListener("mouseleave", () => {
-        btn.style.background = "var(--engage-btn-bg)";
+        btn.style.background = rootStyles.getPropertyValue("--engage-btn-bg");
       });
 
       btn.addEventListener("mousedown", () => {
@@ -701,7 +682,7 @@ function renderDisclaimerPage() {
   container.scrollTop = 0;
 
   const wrapper = document.createElement("div");
-  wrapper.className = "panel-content";
+  wrapper.className = "panel-content disclaimer-content";
 
   // -------------------------
   // 🔙 BACK BUTTON

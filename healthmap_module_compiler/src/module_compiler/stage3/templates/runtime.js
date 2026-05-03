@@ -12,10 +12,16 @@ function loadModule() {
   RuntimeState.resources = data.resources || [];
 
   RuntimeState.slides = data.slides || [];
+
+  const theme = getThemeForModule(RuntimeState.moduleId);
+  applyModuleTheme(theme);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("🚀 INIT START"); // 👈 add this
+
   await loadModule();
+  console.log("🚀 MODULE LOADED");
   setupNavigation();
   setupDrawer();
   setupResume();

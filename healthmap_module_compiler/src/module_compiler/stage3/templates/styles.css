@@ -287,6 +287,9 @@ body {
   :root {
     --font-body: 1rem;   /* 🔥 stop aggressive scaling */
   }
+  .disclaimer-content {
+    flex-direction: column !important;
+  }
 }
 
 @media screen and (orientation: landscape) {
@@ -464,7 +467,7 @@ body {
   gap: var(--content-gap);
 
   font-size: var(--font-body);
-  line-height: 1.7;
+  line-height: 1.6;
 
   width: 100%;
 }
@@ -499,7 +502,7 @@ body {
 
 .panel-content-block p {
   margin: 0 0 1rem 0;
-  line-height: 1.7;
+  line-height: 1.6;
   font-size: var(--font-body);  
 }
 
@@ -769,7 +772,7 @@ body {
 .panel-content-block,
 .engage-content-block {
   font-size: var(--font-body);
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 .panel-content-block p,
@@ -1422,6 +1425,15 @@ li {
 
   pointer-events: none; /* click passes through */
   opacity: 0.9;
+}
+
+.disclaimer-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
 }
 
 /* Optional: hide overlay slightly on small screens */
