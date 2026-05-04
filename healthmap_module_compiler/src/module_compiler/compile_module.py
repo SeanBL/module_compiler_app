@@ -132,6 +132,9 @@ def normalize_filename(name: str) -> str:
     name = re.sub(r"[^a-z0-9\-_.]", "", name)
     return name
 
+def build_package_name(module_title: str, module_id: int | str) -> str:
+    safe_title = normalize_filename(module_title)
+    return f"{safe_title}_{module_id}"
 
 def collect_image_references(module):
     images = set()
@@ -199,7 +202,12 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 
     templates_dir = BASE_DIR / "stage3" / "templates"
     assets_source_dir = PROJECT_ROOT / "data" / "assets"
-    export_dir = PROJECT_ROOT / "data" / "exports" / input_path.stem
+    package_name = build_package_name(
+        stage1_output["module_title"],
+        stage1_output["module_id"]
+    )
+
+    export_dir = PROJECT_ROOT / "data" / "exports" / package_name
     export_assets_dir = export_dir / "assets"
 
     # Clean export folder

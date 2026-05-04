@@ -20,6 +20,8 @@ import shutil
 import webbrowser
 import threading
 import mammoth
+import json
+import re
 
 
 
@@ -257,10 +259,27 @@ def download_build(build_id: str):
         flash("Build ZIP not found.", "error")
         return redirect(url_for("index"))
 
+    output_dir = BUILD_DIR / build_id / "module_output"
+    module_json_path = output_dir / "module.json"
+
+    if module_json_path.exists():
+        with open(module_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        title = data.get("module_title", "module")
+        module_id = data.get("module_id", "0")
+
+        safe_title = re.sub(r"\s+", "-", title.lower())
+        safe_title = re.sub(r"[^a-z0-9\-_.]", "", safe_title)
+
+        filename = f"{safe_title}_{module_id}.zip"
+    else:
+        filename = f"compiled_module_{build_id}.zip"
+
     return send_file(
         zip_path,
         as_attachment=True,
-        download_name=f"compiled_module_{build_id}.zip",
+        download_name=filename,
     )
 
 
