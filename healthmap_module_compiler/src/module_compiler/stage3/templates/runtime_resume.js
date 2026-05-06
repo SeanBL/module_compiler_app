@@ -46,6 +46,7 @@ function setupResume() {
   if (!overlay || !continueBtn || !restartBtn) return;
 
   continueBtn.addEventListener("click", () => {
+    loadProgress();
     closeResume();
     renderSlide();
   });

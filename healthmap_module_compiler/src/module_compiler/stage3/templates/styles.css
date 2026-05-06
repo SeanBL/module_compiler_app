@@ -112,6 +112,14 @@ body {
   min-height: 0;
   transition: opacity 0.25s ease;
 }
+
+.slide-header {
+  color: #4680c1;
+  font-size: var(--font-title);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
 /* Smooth slide transition */
 .slide-fade-out {
   opacity: 0;
@@ -1449,6 +1457,14 @@ li {
   .panel-content-block,
   .engage-content-block {
     gap: clamp(16px, 4vw, 26px);
+    line-height: 1.5;
+  }
+
+  .panel-content-block p,
+  .engage-content-block p,
+  .panel-content-block li,
+  .engage-content-block li {
+    line-height: 1.5;
   }
 
   .panel-content-block img,
@@ -1458,7 +1474,7 @@ li {
 
   .engage1-btn,
   .engage2-btn {
-    width: 100%;               /* 🔥 full width buttons */
+    width: 100%;
     justify-content: center;
   }
 

@@ -778,6 +778,7 @@ function renderHeader(slide, container) {
   if (!slide.header) return;
 
   const header = document.createElement("h2");
+  header.className = "slide-header"; 
   header.textContent = slide.header;
   container.appendChild(header);
 }

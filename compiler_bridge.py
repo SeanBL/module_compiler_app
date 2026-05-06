@@ -64,15 +64,27 @@ def run_compiler_pipeline(input_docx: Path, builds_root: Path) -> dict:
         raise RuntimeError(str(e))
 
     # Step 3: Locate runtime output folder (created by your compiler)
-    export_dir = Path(tempfile.gettempdir()) / "data" / "exports" / input_docx.stem
-    print("EXPORT DIR:", export_dir)
-    print("EXISTS:", export_dir.exists())
+    # export_dir = Path(tempfile.gettempdir()) / "data" / "exports" / input_docx.stem
+    export_dir = RUNTIME_BASE / "data" / "exports" / input_docx.stem
+    exports_root = Path(tempfile.gettempdir()) / "data" / "exports"
 
-    if not export_dir.exists():
-        raise RuntimeError(
-            f"Export directory missing: {export_dir}\n\n"
-            "👉 See annotated document below."
-        )
+    print("EXPORTS ROOT:", exports_root)
+    print("EXPORTS EXISTS:", exports_root.exists())
+
+    if not exports_root.exists():
+        raise RuntimeError(f"Exports root missing: {exports_root}")
+
+    export_dirs = [p for p in exports_root.iterdir() if p.is_dir()]
+
+    print("EXPORT DIRS FOUND:", export_dirs)
+
+    if not export_dirs:
+        raise RuntimeError(f"No export folders found in: {exports_root}")
+
+    # Use the newest export folder
+    export_dir = max(export_dirs, key=lambda p: p.stat().st_mtime)
+
+    print("USING EXPORT DIR:", export_dir)
 
     # Step 4: Copy to Flask build folder
     final_output_dir = build_dir / "module_output"

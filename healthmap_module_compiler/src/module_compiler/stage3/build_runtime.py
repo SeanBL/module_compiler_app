@@ -23,7 +23,7 @@ def build_runtime(slides: List[RawSlide], output_dir: Path) -> None:
 
     inside output_dir.
     """
-
+    print("🚨 BUILD_RUNTIME FILE LOADED:", __file__)
     # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -43,7 +43,7 @@ def build_runtime(slides: List[RawSlide], output_dir: Path) -> None:
     # ---------------------------------
     # 2. Copy runtime templates
     # ---------------------------------
-    for filename in ["index.html", "runtime.js", "styles.css"]:
-        src = TEMPLATES_DIR / filename
-        dst = output_dir / filename
-        shutil.copyfile(src, dst)
+    for file in TEMPLATES_DIR.iterdir():
+        print("🔥 USING TEMPLATES DIR:", TEMPLATES_DIR)
+        if file.is_file():
+            shutil.copyfile(file, output_dir / file.name)
