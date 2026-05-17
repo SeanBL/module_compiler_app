@@ -507,7 +507,8 @@ function updateNavigationUI() {
 async function renderContentBlock({
   textArray = [],
   imageSrc = null,
-  alt = ""
+  alt = "",
+  panelPdf = null
 }) {
   console.log("🚨 NEW renderContentBlock version running");
   console.log("🚨 TEST CHANGE WORKED");
@@ -594,7 +595,39 @@ async function renderContentBlock({
 
       if (item.type === "paragraph") {
         const p = document.createElement("p");
+
         p.textContent = item.text;
+
+        if (
+          panelPdf &&
+          Array.isArray(item.modifiers) &&
+          item.modifiers.includes("italic")
+        ) {
+
+          const link = document.createElement("a");
+
+          link.href = `assets/resources/${panelPdf}`;
+          link.textContent = panelPdf.replace(/\.pdf$/i, "");
+          link.target = "_blank";
+
+          link.style.display = "inline-block";
+          link.style.marginTop = "0.35rem";
+          link.style.fontSize = "0.95rem";
+
+          p.appendChild(document.createElement("br"));
+          p.appendChild(link);
+        }
+
+        // -------------------------
+        // MODIFIERS
+        // -------------------------
+        if (
+          Array.isArray(item.modifiers) &&
+          item.modifiers.includes("italic")
+        ) {
+          p.classList.add("italic-text");
+        }
+
         textWrapper.appendChild(p);
       }
 
@@ -662,7 +695,8 @@ async function renderPanel(slide, container) {
     textArray: slide.body || [],
     imageSrc: slide.image ? `assets/${slide.image}` : null,
     alt: slide.header || "Slide image",
-    imageClass: "panel-image"
+    imageClass: "panel-image",
+    panelPdf: slide.panel_pdf || null
   });
 
   contentWrapper.appendChild(block);

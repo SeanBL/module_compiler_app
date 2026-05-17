@@ -8,7 +8,7 @@ class ParagraphBlock(BaseModel):
     type: Literal["paragraph"]
     text: str
     image: Optional[str] = None
-
+    modifiers: List[str] = []
 
 class BulletsBlock(BaseModel):
     type: Literal["bullets"]

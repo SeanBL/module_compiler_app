@@ -39,6 +39,7 @@ class PanelSlide(BaseModel):
     header: str
     body: List[Union[str, Dict]]
     image: Optional[str] = None
+    panel_pdf: Optional[str] = None
 
 
 # -------------------------

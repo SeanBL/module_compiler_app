@@ -28,7 +28,9 @@ def blocks_to_strings(blocks):
         if block.type == "paragraph":
             output.append({
                 "type": "paragraph",
-                "text": block.text
+                "text": block.text,
+                "image": block.image,
+                "modifiers": block.modifiers
             })
         elif block.type == "bullets":
             output.append({
@@ -49,6 +51,7 @@ def convert_slide(raw: RawSlide):
             header=raw.header,
             body=blocks_to_strings(raw.body or []),
             image=raw.image,
+            panel_pdf=raw.panel_pdf,
         )
 
     if raw.slide_type == "engage1":

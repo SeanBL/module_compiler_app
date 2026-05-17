@@ -104,18 +104,34 @@ def _normalize_panel(slide: RawSlide) -> RawSlide:
 
     normalized_blocks = []
 
+    panel_pdf = None
+
     for block in body:
 
         # Handle ParagraphBlock
         if isinstance(block, ParagraphBlock):
             text = block.text.strip()
 
+            if text.startswith("[PDF:") and text.endswith("]"):
+                panel_pdf = text.replace("[PDF:", "").replace("]", "").strip()
+                continue
+
+            modifiers = []
+
+            if text.startswith("[ITALIC]") and text.endswith("[/ITALIC]"):
+                modifiers.append("italic")
+
+                text = text.replace("[ITALIC]", "")
+                text = text.replace("[/ITALIC]", "")
+                text = text.strip()
+
             if text:
                 normalized_blocks.append(
                     ParagraphBlock(
                         type="paragraph",
                         text=text,
-                        image=block.image
+                        image=block.image,
+                        modifiers=modifiers
                     )
                 )
 
@@ -140,7 +156,12 @@ def _normalize_panel(slide: RawSlide) -> RawSlide:
                 f"Panel slide {slide.slide_id} contains invalid block type"
             )
 
-    return slide.model_copy(update={"body": normalized_blocks})
+    return slide.model_copy(
+        update={
+            "body": normalized_blocks,
+            "panel_pdf": panel_pdf
+        }
+    )
 
 # ==========================================================
 # Quiz Normalization
