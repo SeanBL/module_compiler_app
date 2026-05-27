@@ -414,6 +414,39 @@ function updateNavigationUI() {
 
   const maxIndex = getMaxSlideIndex();
 
+  const resultsIndex = getResultsSlideIndex();
+
+  const isResultsPage =
+    resultsIndex !== null &&
+    RuntimeState.currentIndex === resultsIndex;
+
+
+  /* -------------------------
+    RESULTS PAGE LOCK
+  ------------------------- */
+
+  if (isResultsPage) {
+
+    prevBtns.forEach(btn => {
+      btn.style.display = "none";
+    });
+
+    nextBtns.forEach(btn => {
+      btn.style.display = "none";
+    });
+
+  } else {
+
+    prevBtns.forEach(btn => {
+      btn.style.display = "";
+    });
+
+    nextBtns.forEach(btn => {
+      btn.style.display = "";
+    });
+
+  }
+
   /* -------------------------
      PREV BUTTON STATE
   ------------------------- */
@@ -456,8 +489,6 @@ function updateNavigationUI() {
   /* -------------------------
      SLIDE COUNT
   ------------------------- */
-
-  const resultsIndex = getResultsSlideIndex();
 
   const totalSlides =
     resultsIndex !== null
@@ -583,6 +614,8 @@ async function renderContentBlock({
     const textWrapper = document.createElement("div");
     textWrapper.className = "engage-text";
 
+    let sharedImageModifiers = [];
+
     textArray.forEach(item => {
       if (!item) return;
 
@@ -598,10 +631,16 @@ async function renderContentBlock({
 
         p.textContent = item.text;
 
+        const paragraphModifiers = Array.isArray(item.modifiers)
+          ? item.modifiers
+          : [];
+
+        sharedImageModifiers = paragraphModifiers;
+
         if (
           panelPdf &&
-          Array.isArray(item.modifiers) &&
-          item.modifiers.includes("italic")
+          Array.isArray(paragraphModifiers) &&
+          paragraphModifiers.includes("italic")
         ) {
 
           const link = document.createElement("a");
@@ -621,11 +660,24 @@ async function renderContentBlock({
         // -------------------------
         // MODIFIERS
         // -------------------------
-        if (
-          Array.isArray(item.modifiers) &&
-          item.modifiers.includes("italic")
-        ) {
-          p.classList.add("italic-text");
+        if (Array.isArray(paragraphModifiers)) {
+
+          if (paragraphModifiers.includes("italic")) {
+            p.classList.add("italic-text");
+          }
+
+          if (paragraphModifiers.includes("bold")) {
+            p.classList.add("bold-text");
+          }
+
+          if (paragraphModifiers.includes("blue")) {
+            p.classList.add("blue-text");
+          }
+
+          if (paragraphModifiers.includes("center")) {
+            p.classList.add("center-text");
+          }
+
         }
 
         textWrapper.appendChild(p);
@@ -661,6 +713,14 @@ async function renderContentBlock({
 
     const wrapper = document.createElement("div");
     wrapper.className = "image-wrapper";
+
+    if (Array.isArray(sharedImageModifiers)) {
+
+      if (sharedImageModifiers.includes("center_image")) {
+        wrapper.classList.add("center-image");
+      }
+
+    }
 
     const overlay = document.createElement("div");
     overlay.className = "image-overlay";

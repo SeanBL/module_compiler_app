@@ -569,16 +569,16 @@ function recomputeFinalScoreAndRender() {
     RuntimeUI.resultsShown = false;
   }
 
-  if (RuntimeState.final.completed && !RuntimeUI.resultsShown) {
+  // if (RuntimeState.final.completed && !RuntimeUI.resultsShown) {
 
-    RuntimeUI.resultsShown = true;
+  //   RuntimeUI.resultsShown = true;
 
-    RuntimeState.currentIndex = getResultsSlideIndex();
+  //   RuntimeState.currentIndex = getResultsSlideIndex();
 
-    saveProgress();
-    renderSlide();
-    return;
-  }
+  //   saveProgress();
+  //   renderSlide();
+  //   return;
+  // }
 }
 
 function getResultsSlideIndex() {

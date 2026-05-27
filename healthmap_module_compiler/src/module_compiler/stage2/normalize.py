@@ -9,6 +9,8 @@ from ..models.raw_models import (
 )
 from ..models.blocks import ParagraphBlock, BulletsBlock
 
+import re
+
 
 # ==========================================================
 # Public Entry Point
@@ -94,6 +96,58 @@ def _normalize_slide_type(slide: RawSlide) -> RawSlide:
 
     return slide
 
+# ==========================================================
+# Style Modifier Parser
+# ==========================================================
+
+STYLE_PATTERN = re.compile(
+    r"^\[STYLE=(.*?)\](.*?)\[/STYLE\]$",
+    re.IGNORECASE | re.DOTALL
+)
+
+
+def parse_style_modifiers(text: str):
+
+    modifiers = []
+
+    text = text.strip()
+
+    # -------------------------
+    # NEW STYLE FORMAT
+    # -------------------------
+
+    match = STYLE_PATTERN.match(text)
+
+    if match:
+
+        raw_modifiers = match.group(1)
+        content = match.group(2).strip()
+
+        modifiers = [
+            m.strip().lower()
+            for m in raw_modifiers.split(",")
+            if m.strip()
+        ]
+
+        return content, modifiers
+
+    # -------------------------
+    # LEGACY ITALIC SUPPORT
+    # -------------------------
+
+    if text.startswith("[ITALIC]") and text.endswith("[/ITALIC]"):
+
+        text = text.replace("[ITALIC]", "")
+        text = text.replace("[/ITALIC]", "")
+        text = text.strip()
+
+        return text, ["italic"]
+
+    # -------------------------
+    # NO MODIFIERS
+    # -------------------------
+
+    return text, []
 
 # ==========================================================
 # Panel Normalization
@@ -116,14 +170,7 @@ def _normalize_panel(slide: RawSlide) -> RawSlide:
                 panel_pdf = text.replace("[PDF:", "").replace("]", "").strip()
                 continue
 
-            modifiers = []
-
-            if text.startswith("[ITALIC]") and text.endswith("[/ITALIC]"):
-                modifiers.append("italic")
-
-                text = text.replace("[ITALIC]", "")
-                text = text.replace("[/ITALIC]", "")
-                text = text.strip()
+            text, modifiers = parse_style_modifiers(text)
 
             if text:
                 normalized_blocks.append(

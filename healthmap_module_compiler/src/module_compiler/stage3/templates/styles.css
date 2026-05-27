@@ -502,6 +502,18 @@ body {
   font-style: italic;
 }
 
+.bold-text {
+  font-weight: 700;
+}
+
+.blue-text {
+  color: #4680c1;
+}
+
+.center-text {
+  text-align: center;
+}
+
 /* -------------------------
    Panel Responsive Layout
 ------------------------- */
@@ -545,6 +557,7 @@ body {
 .engage1-intro {
   margin: 0;
   line-height: 1.6;
+  margin-bottom: 24px;
 }
 
 .engage1-image,
@@ -560,6 +573,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+  margin-bottom: 24px;
 }
 
 .engage1-btn,
@@ -595,6 +609,60 @@ body {
     color 0.14s ease;
 
   -webkit-tap-highlight-color: transparent;
+}
+
+.engage1-content:empty {
+  display: none;
+}
+
+/* ---------------------------------
+   Engage1 Landscape Layout
+--------------------------------- */
+
+.engage1-layout {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.engage1-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.engage1-right {
+  width: 38%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.engage1-side-image {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 16px;
+  object-fit: contain;
+}
+
+/* ---------------------------------
+   Portrait Fallback
+--------------------------------- */
+
+@media (orientation: portrait) {
+
+  .engage1-layout {
+    display: block;
+  }
+
+  .engage1-right {
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  .engage1-side-image {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* Hover (desktop only, harmless on mobile) */
