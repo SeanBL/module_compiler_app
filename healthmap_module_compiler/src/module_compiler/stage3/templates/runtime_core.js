@@ -614,8 +614,6 @@ async function renderContentBlock({
     const textWrapper = document.createElement("div");
     textWrapper.className = "engage-text";
 
-    let sharedImageModifiers = [];
-
     textArray.forEach(item => {
       if (!item) return;
 
@@ -634,8 +632,6 @@ async function renderContentBlock({
         const paragraphModifiers = Array.isArray(item.modifiers)
           ? item.modifiers
           : [];
-
-        sharedImageModifiers = paragraphModifiers;
 
         if (
           panelPdf &&
@@ -713,14 +709,6 @@ async function renderContentBlock({
 
     const wrapper = document.createElement("div");
     wrapper.className = "image-wrapper";
-
-    if (Array.isArray(sharedImageModifiers)) {
-
-      if (sharedImageModifiers.includes("center_image")) {
-        wrapper.classList.add("center-image");
-      }
-
-    }
 
     const overlay = document.createElement("div");
     overlay.className = "image-overlay";
