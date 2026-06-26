@@ -48,6 +48,9 @@ def normalize_slides(raw_slides: List[RawSlide]) -> List[RawSlide]:
 
         elif slide.slide_type == "engage2":
             slide = _normalize_engage2(slide)
+        
+        elif slide.slide_type == "decision":
+            slide = _normalize_decision(slide)
 
         else:
             raise ValueError(
@@ -87,7 +90,7 @@ def _normalize_slide_type(slide: RawSlide) -> RawSlide:
     if not slide.slide_type:
         raise ValueError(f"Slide {slide.slide_id} missing slide_type")
 
-    allowed = {"panel", "quiz", "engage1", "engage2"}
+    allowed = {"panel", "quiz", "engage1", "engage2", "decision"}
 
     if slide.slide_type not in allowed:
         raise ValueError(
@@ -400,6 +403,30 @@ def _normalize_engage2(slide: RawSlide) -> RawSlide:
             "engage2_layers": normalized_layers,
         }
     )
+
+# ==========================================================
+# Decision Normalization
+# ==========================================================
+
+def _normalize_decision(slide: RawSlide) -> RawSlide:
+
+    buttons = slide.decision_buttons or []
+
+    if len(buttons) != 2:
+        raise ValueError(
+            f"Decision slide {slide.slide_id} "
+            f"requires exactly 2 buttons"
+        )
+
+    body = slide.body or []
+
+    if not body:
+        raise ValueError(
+            f"Decision slide {slide.slide_id} "
+            f"missing body content"
+        )
+
+    return slide
 
 # ==========================================================
 # Cleanup

@@ -11,9 +11,14 @@ from .stage2.normalize import normalize_slides
 from .stage2_5.final_quiz_builder import build_final_quiz
 from .runtime_builder import build_module
 from .utils.image_utils import convert_to_webp
+from .utils.video_utils import (
+    compress_video,
+    generate_video_poster
+)
 from .utils.annotate_doc import generate_annotated_doc
 
 STRICT_ASSET_MODE = True  # Fail-fast if asset missing
+ENABLE_VIDEO_COMPRESSION = True
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BUILD_ROOT = PROJECT_ROOT / "work" / "builds"
 
@@ -281,15 +286,43 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 
         ext = source_path.suffix.lower()
 
-        SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
+        SUPPORTED_IMAGE_EXTENSIONS = (
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".gif",
+            ".svg"
+        )
 
-        if ext not in SUPPORTED_IMAGE_EXTENSIONS:
+        SUPPORTED_VIDEO_EXTENSIONS = (
+            ".mp4",
+            ".webm"
+        )
+
+        SUPPORTED_MEDIA_EXTENSIONS = (
+            *SUPPORTED_IMAGE_EXTENSIONS,
+            *SUPPORTED_VIDEO_EXTENSIONS
+        )
+
+        if ext not in SUPPORTED_MEDIA_EXTENSIONS:
             continue
         
         print(f"[Asset] Processing: {source_path.name} (ext={ext})")
 
-        # Convert to WebP if needed
-        if ext != ".webp":
+        # --------------------------------------------------
+        # Raster Images → Convert to WebP
+        # --------------------------------------------------
+
+        RASTER_IMAGE_EXTENSIONS = (
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif"
+        )
+
+        if ext in RASTER_IMAGE_EXTENSIONS:
+
             new_filename = normalize_filename(source_path.stem) + ".webp"
             target_path = export_assets_dir / new_filename
 
@@ -297,8 +330,83 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 
             filename_map[img_name] = new_filename
 
-        else:
-            # Already WebP → just copy
+        # --------------------------------------------------
+        # SVG → Copy directly
+        # --------------------------------------------------
+
+        elif ext == ".svg":
+
+            normalized_name = normalize_filename(source_path.name)
+            target_path = export_assets_dir / normalized_name
+
+            shutil.copy(source_path, target_path)
+
+            filename_map[img_name] = normalized_name
+
+        # --------------------------------------------------
+        # Video → Copy directly (for now)
+        # --------------------------------------------------
+
+        elif ext in SUPPORTED_VIDEO_EXTENSIONS:
+
+            normalized_name = normalize_filename(source_path.name)
+            target_path = export_assets_dir / normalized_name
+
+            if ENABLE_VIDEO_COMPRESSION:
+
+                try:
+
+                    print(f"[Video] Compressing: {source_path.name}")
+
+                    compress_video(source_path, target_path)
+
+                    print(f"[Video] Compression complete: {normalized_name}")
+
+                except Exception as e:
+
+                    print(f"⚠️ Video compression failed: {source_path.name}")
+                    print(f"⚠️ Reason: {e}")
+                    print("⚠️ Falling back to original video...")
+
+                    shutil.copy(source_path, target_path)
+
+            else:
+
+                print(f"[Video] Copying without compression: {source_path.name}")
+
+                shutil.copy(source_path, target_path)
+
+            # --------------------------------------------------
+            # Generate Poster Frame
+            # --------------------------------------------------
+
+            try:
+
+                poster_filename = (
+                    Path(normalized_name).stem + "_poster.jpg"
+                )
+
+                poster_path = export_assets_dir / poster_filename
+
+                generate_video_poster(
+                    target_path,
+                    poster_path
+                )
+
+                print(f"[Video] Poster created: {poster_filename}")
+
+            except Exception as e:
+
+                print(f"⚠️ Poster generation failed: {normalized_name}")
+                print(f"⚠️ Reason: {e}")
+            filename_map[img_name] = normalized_name
+
+        # --------------------------------------------------
+        # Already WebP
+        # --------------------------------------------------
+
+        elif ext == ".webp":
+
             normalized_name = normalize_filename(source_path.name)
             target_path = export_assets_dir / normalized_name
 

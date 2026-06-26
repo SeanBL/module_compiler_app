@@ -619,10 +619,18 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                 if "slide type = quiz" in blob:
                     current_slide.slide_type = "quiz"
+
                 elif "slide type = engage 1" in blob:
                     current_slide.slide_type = "engage1"
+
                 elif "slide type = engage 2" in blob:
                     current_slide.slide_type = "engage2"
+
+                elif "slide type = decision" in blob:
+                    current_slide.slide_type = "decision"
+
+                if "optional = yes" in blob:
+                    current_slide.optional = True
 
             # -----------------------------
             # ENGAGE1 PARSING (Correct Layout Handling)
@@ -703,6 +711,35 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                 current_slide.body = blocks
 
+            # -----------------------------
+            # DECISION PARSING
+            # -----------------------------
+            if current_slide.slide_type == "decision" and english:
+
+                blocks = current_slide.body or []
+                buttons = current_slide.decision_buttons or []
+
+                for block in english:
+
+                    if isinstance(block, ParagraphBlock):
+
+                        text = block.text.strip()
+
+                        if text.lower().startswith("[button]"):
+                            label = text[8:].strip()
+                            buttons.append(label)
+                            continue
+
+                        if image:
+                            block.image = image[0]
+
+                        blocks.append(block)
+
+                    else:
+                        blocks.append(block)
+
+                current_slide.body = blocks
+                current_slide.decision_buttons = buttons
 
             if current_slide.slide_type == "panel" and english:
                 blocks = current_slide.body or []
@@ -798,10 +835,28 @@ def extract_raw_slides(docx_path: Path) -> dict:
             current_slide.engage2_layers = layer_blocks
             current_slide.body = None
 
+        if current_slide.slide_type == "decision":
+
+          buttons = current_slide.decision_buttons or []
+
+          if len(buttons) != 2:
+              raise ValueError(
+                  f"Decision slide {current_slide.slide_id} "
+                  f"must contain exactly 2 buttons. "
+                  f"Found: {len(buttons)}"
+              )
+
+          if not current_slide.body:
+              raise ValueError(
+                  f"Decision slide {current_slide.slide_id} "
+                  f"has no content blocks"
+              )
+
         if current_slide.slide_type == "quiz":
             current_slide.quiz_questions = quiz_questions
             current_slide.quiz_type = "mcq"
 
+        print(current_slide)
         slides.append(current_slide)
 
     return {

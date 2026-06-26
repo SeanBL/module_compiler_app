@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from .blocks import Block
 
 
-RawSlideType = Literal["panel", "engage1", "engage2", "quiz"]
+RawSlideType = Literal["panel", "engage1", "engage2", "quiz", "decision"]
 
 
 class RawEngage1Item(BaseModel):
@@ -32,6 +32,9 @@ class RawSlide(BaseModel):
     slide_id: str
     header: str
     slide_type: RawSlideType
+
+    optional: bool = False
+    decision_buttons: Optional[List[str]] = None
 
     # shared
     notes: Optional[str] = None
