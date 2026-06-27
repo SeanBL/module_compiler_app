@@ -38,6 +38,7 @@ class PanelSlide(BaseModel):
     type: Literal["panel"]
     header: str
     body: List[Union[str, Dict]]
+    optional: bool = False
     image: Optional[str] = None
     panel_pdf: Optional[str] = None
 
@@ -56,6 +57,7 @@ class Engage1Slide(BaseModel):
     type: Literal["engage_1"]
     header: str
     intro: List[Union[str, Dict]]
+    optional: bool = False
     intro_image: Optional[str] = None
     items: List[Engage1Item]
 
@@ -73,15 +75,26 @@ class Engage2Slide(BaseModel):
     type: Literal["engage_2"]
     header: str
     intro: str
+    optional: bool = False
     intro_image: Optional[str] = None
     layers: List[Engage2Layer]
     button_label: Optional[str] = Field(default="Continue")
 
 # -------------------------
+# Decision Slide
+# -------------------------
+class DecisionSlide(BaseModel):
+    type: Literal["decision"]
+    header: str
+    body: List[Union[str, Dict]]
+    buttons: List[str]
+    optional: bool = False
+
+# -------------------------
 # Unified Slide Union
 # -------------------------
 
-Slide = PanelSlide | Engage1Slide | Engage2Slide | QuizSlide
+Slide = PanelSlide | Engage1Slide | Engage2Slide | QuizSlide | DecisionSlide
 
 
 # -------------------------
@@ -92,3 +105,4 @@ class Module(BaseModel):
     module_id: str
     version: str = Field(default="1.0")
     slides: List[Slide]
+

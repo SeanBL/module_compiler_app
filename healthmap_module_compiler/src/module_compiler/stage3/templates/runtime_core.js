@@ -191,6 +191,78 @@ function getMaxSlideIndex() {
   return RuntimeState.slides.length - 1;
 }
 
+function findFirstOptionalAfter(decisionIndex) {
+
+  for (
+    let i = decisionIndex + 1;
+    i < RuntimeState.slides.length;
+    i++
+  ) {
+
+    if (RuntimeState.slides[i]?.optional === true) {
+      return i;
+    }
+
+  }
+
+  return null;
+}
+
+// -------------------------
+// Optional Slide
+// -------------------------
+
+function findFirstNonOptionalAfterOptionalBlock(decisionIndex) {
+
+  let foundOptional = false;
+
+  for (
+    let i = decisionIndex + 1;
+    i < RuntimeState.slides.length;
+    i++
+  ) {
+
+    const slide = RuntimeState.slides[i];
+
+    if (slide?.optional === true) {
+      foundOptional = true;
+      continue;
+    }
+
+    if (foundOptional) {
+      return i;
+    }
+
+  }
+
+  return null;
+}
+
+function getVisibleSlidePosition(slideIndex) {
+
+  let visibleCount = 0;
+
+  for (let i = 0; i <= slideIndex; i++) {
+
+    const slide = RuntimeState.slides[i];
+
+    if (slide?.optional === true) {
+      continue;
+    }
+
+    visibleCount++;
+  }
+
+  return visibleCount;
+}
+
+function getVisibleSlideTotal() {
+
+  return RuntimeState.slides.filter(slide =>
+    slide?.optional !== true
+  ).length;
+}
+
 // -------------------------
 // Navigation Setup
 // -------------------------
@@ -216,6 +288,7 @@ function setupNavigation() {
     ------------------------- */
 
     if (action === "prev") {
+      const currentSlide = RuntimeState.slides[RuntimeState.currentIndex];
       if (
         RuntimeState.slides[RuntimeState.currentIndex]?.type === "quiz" &&
         (RuntimeState.slides[RuntimeState.currentIndex].quiz_scope || "inline") === "final"
@@ -225,6 +298,22 @@ function setupNavigation() {
         if (RuntimeState.finalCursor > 0) {
           RuntimeState.finalCursor--;
         }
+
+        closeDrawer();
+        saveProgress();
+        renderSlide();
+        return;
+      }
+
+      if (
+        RuntimeState.branchReturnIndex !== null &&
+        currentSlide?.optional !== true
+      ) {
+
+        RuntimeState.currentIndex =
+          RuntimeState.branchReturnIndex;
+
+        RuntimeState.branchReturnIndex = null;
 
         closeDrawer();
         saveProgress();
@@ -392,6 +481,10 @@ async function dispatchSlide(slide, container) {
       renderEngage2(slide, container);
       break;
 
+    case "decision":
+      renderDecision(slide, container);
+      break;
+
     case "quiz":
       renderQuiz(slide, container);
       break;
@@ -466,6 +559,8 @@ function updateNavigationUI() {
 
   const slide = RuntimeState.slides[RuntimeState.currentIndex] || null;
 
+  const isDecision = slide?.type === "decision";
+
   let effectiveSlideIndex = RuntimeState.currentIndex;
 
   if (slide?.type === "quiz" && (slide.quiz_scope || "inline") === "final") {
@@ -486,6 +581,20 @@ function updateNavigationUI() {
     btn.disabled = disableNext;
   });
 
+  if (isDecision) {
+
+    nextBtns.forEach(btn => {
+      btn.style.display = "none";
+    });
+
+  } else {
+
+    nextBtns.forEach(btn => {
+      btn.style.display = "";
+    });
+
+  }
+
   /* -------------------------
      SLIDE COUNT
   ------------------------- */
@@ -497,10 +606,7 @@ function updateNavigationUI() {
     currentSlide?.type === "quiz" &&
     (currentSlide.quiz_scope || "inline") === "final";
 
-  const totalSlides =
-    resultsIndex !== null
-      ? resultsIndex + 1
-      : RuntimeState.slides.length;
+  const totalSlides = getVisibleSlideTotal();
 
   counters.forEach(counter => {
 
@@ -511,17 +617,63 @@ function updateNavigationUI() {
 
     counter.style.visibility = "visible";
 
+    let displayPosition;
+
+    if (currentSlide?.optional === true) {
+
+      let decisionIndex = RuntimeState.currentIndex;
+
+      while (
+        decisionIndex > 0 &&
+        RuntimeState.slides[decisionIndex]?.optional === true
+      ) {
+        decisionIndex--;
+      }
+
+      displayPosition =
+        getVisibleSlidePosition(decisionIndex);
+
+    } else {
+
+      displayPosition =
+        getVisibleSlidePosition(RuntimeState.currentIndex);
+
+    }
+
     counter.textContent =
-      `${RuntimeState.currentIndex + 1} / ${totalSlides}`;
+      `${displayPosition} / ${totalSlides}`;
   });
 
   /* -------------------------
      PROGRESS BAR
   ------------------------- */
 
+  let progressPosition;
+
+  if (currentSlide?.optional === true) {
+
+    let decisionIndex = RuntimeState.currentIndex;
+
+    while (
+      decisionIndex > 0 &&
+      RuntimeState.slides[decisionIndex]?.optional === true
+    ) {
+      decisionIndex--;
+    }
+
+    progressPosition =
+      getVisibleSlidePosition(decisionIndex);
+
+  } else {
+
+    progressPosition =
+      getVisibleSlidePosition(RuntimeState.currentIndex);
+
+  }
+
   const progress =
     totalSlides > 0
-      ? ((RuntimeState.currentIndex + 1) / totalSlides) * 100
+      ? (progressPosition / totalSlides) * 100
       : 0;
 
   progressFills.forEach(fill => {
@@ -831,6 +983,83 @@ async function renderPanel(slide, container) {
 
   contentWrapper.appendChild(block);
   container.appendChild(contentWrapper);
+}
+
+// -------------------------
+// Decision Panel Renderer
+// -------------------------
+
+async function renderDecision(slide, container) {
+
+  renderHeader(slide, container);
+
+  const block = await renderContentBlock({
+    textArray: slide.body || [],
+    imageSrc: null,
+    alt: ""
+  });
+
+  container.appendChild(block);
+
+  const buttonRow = document.createElement("div");
+
+  buttonRow.style.display = "flex";
+  buttonRow.style.gap = "1rem";
+  buttonRow.style.marginTop = "1.5rem";
+  buttonRow.style.flexWrap = "wrap";
+
+  slide.buttons.forEach((label, idx) => {
+
+    const btn = document.createElement("button");
+
+    btn.textContent = label;
+    btn.className = "engage1-btn";
+
+    btn.addEventListener("click", () => {
+
+      const decisionIndex = RuntimeState.currentIndex;
+
+      // Button 1
+      if (idx === 0) {
+
+        const target =
+          findFirstOptionalAfter(decisionIndex);
+
+        if (target !== null) {
+
+          RuntimeState.currentIndex = target;
+
+          saveProgress();
+          renderSlide();
+        }
+
+        return;
+      }
+
+      // Button 2
+      const target =
+        findFirstNonOptionalAfterOptionalBlock(
+          decisionIndex
+        );
+
+      if (target !== null) {
+
+        RuntimeState.branchReturnIndex =
+          decisionIndex;
+
+        RuntimeState.currentIndex = target;
+
+        saveProgress();
+        renderSlide();
+      }
+
+    });
+
+    buttonRow.appendChild(btn);
+
+  });
+
+  container.appendChild(buttonRow);
 }
 
 // -------------------------

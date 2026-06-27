@@ -13,6 +13,7 @@ from .models.schema import (
     QuizQuestion,
     QuizOption,
     Engage2Layer,
+    DecisionSlide,
 )
 
 
@@ -50,6 +51,7 @@ def convert_slide(raw: RawSlide):
             type="panel",
             header=raw.header,
             body=blocks_to_strings(raw.body or []),
+            optional=raw.optional,
             image=raw.image,
             panel_pdf=raw.panel_pdf,
         )
@@ -74,6 +76,7 @@ def convert_slide(raw: RawSlide):
 
         return Engage1Slide(
             type="engage_1",
+            optional=raw.optional,
             header=raw.header,
             intro=intro_text,
             intro_image=raw.engage1_intro_image,
@@ -101,11 +104,22 @@ def convert_slide(raw: RawSlide):
 
         return Engage2Slide(
             type="engage_2",
+            optional=raw.optional,
             header=raw.header,
             intro=intro_text,
             intro_image=intro_image,
             layers=layers,
             button_label=raw.engage2_button_label or "Continue",
+        )
+    
+    if raw.slide_type == "decision":
+
+        return DecisionSlide(
+            type="decision",
+            optional=raw.optional,
+            header=raw.header,
+            body=blocks_to_strings(raw.body or []),
+            buttons=raw.decision_buttons or [],
         )
 
     if raw.slide_type == "quiz":
