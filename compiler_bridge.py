@@ -3,6 +3,8 @@ import uuid
 import shutil
 import sys
 import tempfile
+import time
+
 
 
 
@@ -17,13 +19,11 @@ else:
 
 RUNTIME_BASE.mkdir(parents=True, exist_ok=True)
 
-from module_compiler.compile_module import compile_module
-import time
-
 if not getattr(sys, 'frozen', False):
     SRC_PATH = COMPILER_ROOT / "src"
     sys.path.insert(0, str(SRC_PATH))
-
+from module_compiler.compile_module import compile_module
+from module_compiler.version import COMPILER_VERSION
 
 def cleanup_old_builds(builds_root: Path, max_age_hours: int = 24):
     now = time.time()
@@ -38,6 +38,11 @@ def cleanup_old_builds(builds_root: Path, max_age_hours: int = 24):
             shutil.rmtree(build, ignore_errors=True)
 
 def run_compiler_pipeline(input_docx: Path, builds_root: Path) -> dict:
+    print()
+    print("=" * 70)
+    print(f"WiRED HealthMAP Module Compiler v{COMPILER_VERSION}")
+    print(f"Build Started : {input_docx.name}")
+    print("=" * 70)
     cleanup_old_builds(builds_root)
     build_id = uuid.uuid4().hex[:8]
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 import re
 import json
 from pathlib import Path
+from .version import COMPILER_VERSION
 import argparse
 import shutil
 import re
@@ -27,6 +28,14 @@ def extract_slide_id_from_error(msg: str) -> str | None:
     return match.group(1) if match else None
 
 def compile_module(input_path: Path, output_path: Path, build_dir: Path | None = None) -> None:
+    
+    print()
+    print("=" * 60)
+    print(f"WiRED HealthMAP Module Compiler v{COMPILER_VERSION}")
+    print("=" * 60)
+    print(f"Building: {input_path.name}")
+    print()
+    
     if build_dir:
         annotated_doc_path = build_dir / f"{input_path.stem}_ANNOTATED.docx"
     else:
@@ -57,6 +66,20 @@ def compile_module(input_path: Path, output_path: Path, build_dir: Path | None =
     )
 
     raw_slides = stage1_output["slides"]
+
+    print("\n========== RAW SLIDES ==========")
+
+    for slide in raw_slides:
+        if slide.slide_type == "engage2":
+            print("\n----------------")
+            print("ID:", slide.slide_id)
+            print("HEADER:", slide.header)
+            print("TYPE:", slide.slide_type)
+            print("BODY:", slide.body is not None)
+            print("INTRO:", slide.engage2_intro)
+            print("LAYERS:", slide.engage2_layers)
+
+    print("================================\n")
 
     # Step 2: Normalize (Stage 2)
     try:
@@ -108,7 +131,7 @@ def compile_module(input_path: Path, output_path: Path, build_dir: Path | None =
     final_json = {
         "module_title": stage1_output["module_title"],
         "module_id": stage1_output["module_id"],
-        "version": "1.0",
+        "version": COMPILER_VERSION,
         "slides": [s.model_dump() for s in module.slides]
     }
     print("FINAL JSON:", final_json)
@@ -469,7 +492,7 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
         json.dumps({
             "module_title": stage1_output["module_title"],
             "module_id": stage1_output["module_id"],
-            "version": "1.0",
+            "version": COMPILER_VERSION,
             "resources": resources,
             "slides": [s.model_dump() for s in module.slides]
         }, indent=2, ensure_ascii=False),
@@ -489,53 +512,53 @@ def package_runtime(module, input_path: Path, stage1_output) -> None:
 # --------------------------------------------------
 
 def _auto_detect_input() -> Path:
-    project_root = Path(__file__).resolve().parents[2]
-    raw_dir = project_root / "data" / "raw"
+  project_root = Path(__file__).resolve().parents[2]
+  raw_dir = project_root / "data" / "raw"
 
-    if not raw_dir.exists():
-        raise SystemExit(f"❌ data/raw directory not found at {raw_dir}")
+  if not raw_dir.exists():
+      raise SystemExit(f"❌ data/raw directory not found at {raw_dir}")
 
-    docx_files = list(raw_dir.glob("*.docx"))
+  docx_files = list(raw_dir.glob("*.docx"))
 
-    if len(docx_files) == 0:
-        raise SystemExit("❌ No .docx files found in data/raw")
+  if len(docx_files) == 0:
+      raise SystemExit("❌ No .docx files found in data/raw")
 
-    if len(docx_files) > 1:
-        names = "\n".join(str(p.name) for p in docx_files)
-        raise SystemExit(
-            f"❌ Multiple .docx files found in data/raw:\n{names}\n"
-            "Please specify --in explicitly."
-        )
+  if len(docx_files) > 1:
+      names = "\n".join(str(p.name) for p in docx_files)
+      raise SystemExit(
+          f"❌ Multiple .docx files found in data/raw:\n{names}\n"
+          "Please specify --in explicitly."
+      )
 
-    return docx_files[0]
+  return docx_files[0]
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Compile Word blueprint into runtime JSON"
-    )
-    parser.add_argument("--in", dest="input_path", required=False)
-    parser.add_argument("--out", dest="output_path", required=False)
-    parser.add_argument("--debug", action="store_true")
+  parser = argparse.ArgumentParser(
+      description="Compile Word blueprint into runtime JSON"
+  )
+  parser.add_argument("--in", dest="input_path", required=False)
+  parser.add_argument("--out", dest="output_path", required=False)
+  parser.add_argument("--debug", action="store_true")
 
-    args = parser.parse_args()
+  args = parser.parse_args()
 
-    if args.input_path:
-        input_path = Path(args.input_path)
-    else:
-        input_path = _auto_detect_input()
-        print(f"📄 Auto-detected input: {input_path.name}")
+  if args.input_path:
+      input_path = Path(args.input_path)
+  else:
+      input_path = _auto_detect_input()
+      print(f"📄 Auto-detected input: {input_path.name}")
 
-    if not input_path.exists():
-        raise SystemExit(f"❌ Input file not found: {input_path}")
+  if not input_path.exists():
+      raise SystemExit(f"❌ Input file not found: {input_path}")
 
-    if args.output_path:
-        output_path = Path(args.output_path)
-    else:
-        output_path = Path("data") / "exports" / f"{input_path.stem}.json"
+  if args.output_path:
+      output_path = Path(args.output_path)
+  else:
+      output_path = Path("data") / "exports" / f"{input_path.stem}.json"
 
-    compile_module(input_path, output_path)
+  compile_module(input_path, output_path)
 
 
 if __name__ == "__main__":
-    main()
+  main()

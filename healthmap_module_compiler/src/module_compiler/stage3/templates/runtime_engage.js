@@ -157,20 +157,58 @@ function renderEngage2(slide, container) {
   const slideIndex = RuntimeState.currentIndex;
   const engage = ensureEngageState(slideIndex);
 
+  const mode = slide.mode || "build";
+  const isReplaceMode = mode === "replace";
+
   const wrapper = document.createElement("div");
   wrapper.className = "engage2-wrapper";
 
+  const layout = document.createElement("div");
+  layout.className = "engage2-layout";
+
+  const left = document.createElement("div");
+  left.className = "engage2-left";
+
+  const introArea = document.createElement("div");
+  introArea.className = "engage2-intro";
+
+  const right = document.createElement("div");
+  right.className = "engage2-right";
+
+  const imageArea = document.createElement("div");
+  imageArea.className = "engage2-image-area";
+
   // Intro (async-safe image)
   async function renderIntro() {
-    const block = await renderContentBlock({
-      textArray: slide.intro ? [slide.intro] : [],
-      imageSrc: slide.intro_image ? `assets/${slide.intro_image}` : null,
-      alt: "Intro image",
-      imageClass: "engage2-image"
+
+    const introBlock = await renderContentBlock({
+      textArray: slide.intro || [],
+      imageSrc: null,
+      alt: "Intro image"
     });
 
-    wrapper.appendChild(block);
+    introArea.replaceChildren(introBlock);
+
+    imageArea.innerHTML = "";
+
+    if (slide.intro_image) {
+
+      const img = await createReadyImage(
+        `assets/${slide.intro_image}`,
+        "Intro image",
+        "engage2-side-image"
+      );
+
+      imageArea.appendChild(img);
+    }
+
   }
+
+  // Previous Button
+  const prevLayerBtn = document.createElement("button");
+  prevLayerBtn.type = "button";
+  prevLayerBtn.textContent = "Previous";
+  prevLayerBtn.className = "engage2-btn";
 
   // Reveal Button
   const revealBtn = document.createElement("button");
@@ -184,17 +222,53 @@ function renderEngage2(slide, container) {
 
   const layers = Array.isArray(slide.layers) ? slide.layers : [];
 
-  let revealedCount = 0;
-  if (
-    typeof engage.revealedCount === "number" &&
-    engage.revealedCount >= 0
-  ) {
-    revealedCount = Math.min(engage.revealedCount, layers.length);
+  // -------------------------
+  // Restore State
+  // -------------------------
+
+  if (typeof engage.currentLayer !== "number") {
+    engage.currentLayer = 0;
   }
 
-  let currentLayerIndex = revealedCount;
+  if (typeof engage.revealedCount !== "number") {
+    engage.revealedCount = 0;
+  }
+
+  let currentLayerIndex = Math.min(
+    engage.currentLayer,
+    layers.length
+  );
+
+  let revealedCount = Math.min(
+    engage.revealedCount,
+    layers.length
+  );
 
   async function restoreLayers() {
+
+    // -------------------------
+    // Replace Mode
+    // -------------------------
+
+    if (isReplaceMode) {
+
+      if (
+        currentLayerIndex > 0 &&
+        currentLayerIndex <= layers.length
+      ) {
+        await showReplaceLayer(
+          layers[currentLayerIndex - 1],
+          stackArea
+        );
+      }
+
+      return;
+    }
+
+    // -------------------------
+    // Build Mode (existing behavior)
+    // -------------------------
+
     for (let i = 0; i < revealedCount; i++) {
       await appendEngage2Layer(layers[i], stackArea);
     }
@@ -202,37 +276,209 @@ function renderEngage2(slide, container) {
     if (currentLayerIndex >= layers.length) {
       revealBtn.disabled = true;
     }
+
+  }
+
+  // -------------------------
+  // Update Button State
+  // -------------------------
+
+  function updateButtonState() {
+
+    if (!isReplaceMode) {
+      return;
+    }
+
+    prevLayerBtn.disabled = currentLayerIndex <= 1;
+
+    const buttonLabel =
+      currentLayerIndex >= layers.length
+        ? "Finish"
+        : (slide.button_label || "Continue");
+
+    revealBtn.textContent = buttonLabel;
+
+    engage2Status.innerHTML = "";
+
   }
 
   revealBtn.addEventListener("click", async () => {
-    if (currentLayerIndex >= layers.length) return;
 
-    revealBtn.disabled = true;
+    if (mode === "build") {
 
-    await appendEngage2Layer(layers[currentLayerIndex], stackArea);
-    currentLayerIndex++;
+      if (currentLayerIndex >= layers.length) return;
 
-    engage.revealedCount = currentLayerIndex;
-    saveProgress();
+      revealBtn.disabled = true;
 
-    if (currentLayerIndex < layers.length) {
+      await appendEngage2Layer(layers[currentLayerIndex], stackArea);
+      engage2Controls.scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+      });
+      currentLayerIndex++;
+
+      engage.currentLayer = currentLayerIndex;
+      engage.revealedCount = currentLayerIndex;
+
+      if (currentLayerIndex >= layers.length) {
+
+        engage.completed = true;
+
+        saveProgress();
+
+        revealBtn.style.display = "none";
+
+        const completeMsg = document.createElement("div");
+        completeMsg.className = "engage2-complete-message";
+        completeMsg.textContent =
+          "✓ Section complete. You may continue.";
+
+        stackArea.appendChild(completeMsg);
+
+        updateNavigationUI();
+
+        return;
+      }
+
+      saveProgress();
+
       revealBtn.disabled = false;
+
+      return;
     }
+
+    if (mode === "replace") {
+
+      if (currentLayerIndex >= layers.length) {
+
+        engage.completed = true;
+
+        engage2Status.innerHTML = "";
+
+        saveProgress();
+
+        revealBtn.style.display = "none";
+        prevLayerBtn.style.display = "none";
+
+        const completeMsg = document.createElement("div");
+        completeMsg.className = "engage2-complete-message";
+        completeMsg.textContent = "✓ Section complete. You may continue.";
+
+        stackArea.appendChild(completeMsg);
+
+        updateNavigationUI();
+
+        return;
+      }
+
+      revealBtn.disabled = true;
+
+      await showReplaceLayer(
+        layers[currentLayerIndex],
+        stackArea
+      );
+
+      currentLayerIndex++;
+
+      engage.currentLayer = currentLayerIndex;
+
+      saveProgress();
+
+      updateButtonState();
+
+      revealBtn.disabled = false;
+
+      return;
+    }
+
   });
 
-  wrapper.appendChild(revealBtn);
-  wrapper.appendChild(stackArea);
+  prevLayerBtn.addEventListener("click", async () => {
+
+    // Build mode doesn't use Previous
+    if (!isReplaceMode) {
+      return;
+    }
+
+    // Already at the first layer
+    if (currentLayerIndex <= 1) {
+      return;
+    }
+
+    currentLayerIndex--;
+
+    engage.currentLayer = currentLayerIndex;
+
+    await showReplaceLayer(
+      layers[currentLayerIndex - 1],
+      stackArea
+    );
+
+    saveProgress();
+    updateButtonState();
+
+  });
+
+  const engage2Controls = document.createElement("div");
+  engage2Controls.className = "engage2-controls";
+
+  engage2Controls.appendChild(prevLayerBtn);
+  engage2Controls.appendChild(revealBtn);
+
+  if (!isReplaceMode) {
+    prevLayerBtn.style.display = "none";
+  }
+
+  const engage2Status = document.createElement("div");
+  engage2Status.className = "engage2-status";
+
+  updateButtonState();
+
+  left.appendChild(introArea);
+  left.appendChild(engage2Status);
+  left.appendChild(stackArea);
+  left.appendChild(engage2Controls);
+
+  right.appendChild(imageArea);
+
+  layout.appendChild(left);
+  layout.appendChild(right);
+
+  wrapper.appendChild(layout);
+
   container.appendChild(wrapper);
 
   // IMPORTANT: Run async flow in order to prevent flicker
   (async () => {
-    await renderIntro();
-    await restoreLayers();
 
-    if (typeof engage.revealedCount !== "number") {
-      engage.revealedCount = revealedCount;
-      saveProgress();
+    await renderIntro();
+
+    if (mode === "build") {
+
+      await restoreLayers();
+
+      if (typeof engage.revealedCount !== "number") {
+        engage.revealedCount = revealedCount;
+        saveProgress();
+      }
+
     }
+    else if (mode === "replace") {
+
+      console.log("Engage 2 Replace mode");
+
+      // Temporary:
+      // For now, use the existing Build behavior.
+      // We'll replace this in the next step.
+      await restoreLayers();
+
+      if (typeof engage.revealedCount !== "number") {
+        engage.revealedCount = revealedCount;
+        saveProgress();
+      }
+
+    }
+
   })();
 }
 
@@ -245,7 +491,7 @@ async function appendEngage2Layer(layer, stackArea) {
   layerWrapper.className = "engage2-layer engage-fade-in";
 
   const block = await renderContentBlock({
-    textArray: layer.text ? [layer.text] : [],
+    textArray: layer.body || [],
     imageSrc: layer.image ? `assets/${layer.image}` : null,
     alt: "Layer image",
     imageClass: "engage2-image"
@@ -253,6 +499,28 @@ async function appendEngage2Layer(layer, stackArea) {
 
   layerWrapper.appendChild(block);
   stackArea.appendChild(layerWrapper);
+ 
+}
+
+// -------------------------
+// Show Replace Layer
+// -------------------------
+
+async function showReplaceLayer(layer, stackArea) {
+
+  const layerWrapper = document.createElement("div");
+  layerWrapper.className = "engage2-layer engage-fade-in";
+
+  const block = await renderContentBlock({
+    textArray: layer.body || [],
+    imageSrc: layer.image ? `assets/${layer.image}` : null,
+    alt: "Layer image"
+  });
+
+  layerWrapper.appendChild(block);
+
+  stackArea.replaceChildren(layerWrapper);
+
 }
 
 // -------------------------

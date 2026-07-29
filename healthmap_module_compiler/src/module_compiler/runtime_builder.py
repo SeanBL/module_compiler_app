@@ -53,6 +53,7 @@ def convert_slide(raw: RawSlide):
             body=blocks_to_strings(raw.body or []),
             optional=raw.optional,
             image=raw.image,
+            image_position=raw.image_position,
             panel_pdf=raw.panel_pdf,
         )
 
@@ -89,38 +90,38 @@ def convert_slide(raw: RawSlide):
         intro_image = raw.engage2_intro_image
 
         if raw.engage2_intro:
-            intro_blocks = blocks_to_strings(raw.engage2_intro)
-            intro_text = "\n".join(intro_blocks)
+            intro_text = blocks_to_strings(raw.engage2_intro)
 
         layers = []
 
         for block in raw.engage2_layers or []:
-            layers.append(
-                Engage2Layer(
-                    text=block.text,
-                    image=block.image,
-                )
+          layers.append(
+            Engage2Layer(
+              body=blocks_to_strings([block]),
+              image=block.image,
             )
+          )
 
         return Engage2Slide(
-            type="engage_2",
-            optional=raw.optional,
-            header=raw.header,
-            intro=intro_text,
-            intro_image=intro_image,
-            layers=layers,
-            button_label=raw.engage2_button_label or "Continue",
+          type="engage_2",
+          optional=raw.optional,
+          header=raw.header,
+          intro=intro_text,
+          intro_image=intro_image,
+          layers=layers,
+          mode=raw.engage2_mode,
+          button_label=raw.engage2_button_label or "Continue",
         )
     
     if raw.slide_type == "decision":
 
-        return DecisionSlide(
-            type="decision",
-            optional=raw.optional,
-            header=raw.header,
-            body=blocks_to_strings(raw.body or []),
-            buttons=raw.decision_buttons or [],
-        )
+      return DecisionSlide(
+        type="decision",
+        optional=raw.optional,
+        header=raw.header,
+        body=blocks_to_strings(raw.body or []),
+        buttons=raw.decision_buttons or [],
+      )
 
     if raw.slide_type == "quiz":
         slides = []

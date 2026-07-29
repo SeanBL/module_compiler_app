@@ -1,38 +1,66 @@
 from PIL import Image, ImageSequence
 from pathlib import Path
 
-def convert_to_webp(input_path: Path, output_path: Path, quality=80):
+
+def convert_to_webp(
+    input_path: Path,
+    output_path: Path,
+    quality=80
+):
     try:
         with Image.open(input_path) as img:
 
             output_path = output_path.with_suffix(".webp")
 
-            # 🔥 Handle animated GIFs
+            # Handle animated GIFs
             if getattr(img, "is_animated", False):
-                MAX_FRAMES = 20   # 👈 PLACE IT RIGHT HERE
+                MAX_FRAMES = 20
 
                 frames = []
-
                 durations = []
 
-                for i, frame in enumerate(ImageSequence.Iterator(img)):
+                for i, frame in enumerate(
+                    ImageSequence.Iterator(img)
+                ):
                     if i >= MAX_FRAMES:
-                        print(f"⚠️ Truncated GIF to {MAX_FRAMES} frames: {input_path.name}")
+                        print(
+                            f"⚠️ Truncated GIF to "
+                            f"{MAX_FRAMES} frames: "
+                            f"{input_path.name}"
+                        )
                         break
 
                     dur = frame.info.get("duration", 100)
-                    dur = max(20, int(dur))  # clamp to at least 20ms
+                    dur = max(20, int(dur))
                     durations.append(dur)
-                    frame = frame.convert("RGB")
+
+                    frame = frame.convert("RGBA")
+
+                    # Composite transparent frames onto white
+                    background = Image.new(
+                        "RGBA",
+                        frame.size,
+                        (255, 255, 255, 255)
+                    )
+
+                    frame = Image.alpha_composite(
+                        background,
+                        frame
+                    ).convert("RGB")
+
                     frames.append(frame)
 
-                
                 if not frames:
-                    raise RuntimeError(f"No frames extracted from GIF: {input_path.name}")
-                
-                # Optional: normalize frame sizes
+                    raise RuntimeError(
+                        f"No frames extracted from GIF: "
+                        f"{input_path.name}"
+                    )
+
                 base_size = frames[0].size
-                frames = [f.resize(base_size) for f in frames]
+                frames = [
+                    frame.resize(base_size)
+                    for frame in frames
+                ]
 
                 frames[0].save(
                     output_path,
@@ -46,11 +74,39 @@ def convert_to_webp(input_path: Path, output_path: Path, quality=80):
                 )
 
             else:
-                img = img.convert("RGB")
-                img.save(output_path, "WEBP", quality=quality, method=6)
+                # Properly handle transparent PNGs
+                if img.mode in ("RGBA", "LA") or (
+                    img.mode == "P"
+                    and "transparency" in img.info
+                ):
+                    img = img.convert("RGBA")
+
+                    background = Image.new(
+                        "RGBA",
+                        img.size,
+                        (255, 255, 255, 255)
+                    )
+
+                    img = Image.alpha_composite(
+                        background,
+                        img
+                    ).convert("RGB")
+
+                else:
+                    img = img.convert("RGB")
+
+                img.save(
+                    output_path,
+                    "WEBP",
+                    quality=quality,
+                    method=6
+                )
 
         return output_path.name
 
     except Exception as e:
-        print(f"❌ Failed to convert {input_path}: {e}")
+        print(
+            f"❌ Failed to convert "
+            f"{input_path}: {e}"
+        )
         return input_path.name

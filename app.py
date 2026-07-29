@@ -22,6 +22,11 @@ import threading
 import mammoth
 import json
 import re
+from module_compiler.version import COMPILER_VERSION
+
+print("=" * 70)
+print(f"WiRED HealthMAP Module Compiler v{COMPILER_VERSION}")
+print("=" * 70)
 
 
 

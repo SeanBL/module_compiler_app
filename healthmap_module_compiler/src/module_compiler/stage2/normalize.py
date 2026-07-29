@@ -205,7 +205,9 @@ def _normalize_panel(slide: RawSlide) -> RawSlide:
             raise ValueError(
                 f"Panel slide {slide.slide_id} contains invalid block type"
             )
-
+    print("------")
+    print("HEADER:", slide.header)
+    print("PDF:", panel_pdf)
     return slide.model_copy(
         update={
             "body": normalized_blocks,

@@ -284,6 +284,30 @@ def finalize_engage1_slide(slide: RawSlide, pending_button_labels: List[str]) ->
     slide.engage1_intro_image = getattr(intro[0], "image", None)
     slide.body = None
 
+def finalize_engage2_slide(slide: RawSlide) -> None:
+
+    if not slide.body or not any(
+        isinstance(b, (ParagraphBlock, BulletsBlock))
+        for b in slide.body
+    ):
+        raise ValueError(
+            f"Engage2 slide {slide.slide_id} has no content blocks"
+        )
+
+    paragraphs = slide.body
+    intro_blocks = [paragraphs[0]]
+    layer_blocks = paragraphs[1:]
+
+    if not layer_blocks:
+        raise ValueError(
+            f"Engage2 slide {slide.slide_id} must have at least one reveal layer"
+        )
+
+    slide.engage2_intro = intro_blocks
+    slide.engage2_intro_image = getattr(intro_blocks[0], "image", None)
+    slide.engage2_layers = layer_blocks
+    slide.body = None
+
 # --------------------------------------------------
 # Structural Extraction
 # --------------------------------------------------
@@ -337,6 +361,9 @@ def extract_raw_slides(docx_path: Path) -> dict:
                         # 🔥 CRITICAL RESET
                         pending_button_labels = []
                         current_slide.body = None
+
+                    if current_slide.slide_type == "engage2":
+                        finalize_engage2_slide(current_slide)
 
                     if current_slide.slide_type == "quiz":
                         current_slide.quiz_questions = quiz_questions
@@ -430,28 +457,7 @@ def extract_raw_slides(docx_path: Path) -> dict:
                         current_slide.body = None
 
                     if current_slide.slide_type == "engage2":
-
-                        if not current_slide.body or not any(
-                            isinstance(b, (ParagraphBlock, BulletsBlock))
-                            for b in current_slide.body
-                        ):
-                            raise ValueError(
-                                f"Engage2 slide {current_slide.slide_id} has no content blocks"
-                            )
-
-                        paragraphs = current_slide.body
-                        intro_blocks = [paragraphs[0]]
-                        layer_blocks = paragraphs[1:]
-
-                        if not layer_blocks:
-                            raise ValueError(
-                                f"Engage2 slide {current_slide.slide_id} must have at least one reveal layer"
-                            )
-
-                        current_slide.engage2_intro = intro_blocks
-                        current_slide.engage2_intro_image = getattr(intro_blocks[0], "image", None)
-                        current_slide.engage2_layers = layer_blocks
-                        current_slide.body = None
+                        finalize_engage2_slide(current_slide)
 
                     if current_slide.slide_type == "quiz":
                         current_slide.quiz_questions = quiz_questions
@@ -631,6 +637,12 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                 if "optional = yes" in blob:
                     current_slide.optional = True
+                
+                if "layout = image left" in blob:
+                    current_slide.image_position = "left"
+                
+                if "mode = replace" in blob:
+                    current_slide.engage2_mode = "replace"
 
             # -----------------------------
             # ENGAGE1 PARSING (Correct Layout Handling)
@@ -812,28 +824,7 @@ def extract_raw_slides(docx_path: Path) -> dict:
             current_slide.body = None
 
         if current_slide.slide_type == "engage2":
-
-            if not current_slide.body or not any(
-                isinstance(b, (ParagraphBlock, BulletsBlock))
-                for b in current_slide.body
-            ):
-                raise ValueError(
-                    f"Engage2 slide {current_slide.slide_id} has no content blocks"
-                )
-
-            paragraphs = current_slide.body
-            intro_blocks = [paragraphs[0]]
-            layer_blocks = paragraphs[1:]
-
-            if not layer_blocks:
-                raise ValueError(
-                    f"Engage2 slide {current_slide.slide_id} must have at least one reveal layer"
-                )
-
-            current_slide.engage2_intro = intro_blocks
-            current_slide.engage2_intro_image = getattr(intro_blocks[0], "image", None)
-            current_slide.engage2_layers = layer_blocks
-            current_slide.body = None
+            finalize_engage2_slide(current_slide)
 
         if current_slide.slide_type == "decision":
 
@@ -856,8 +847,17 @@ def extract_raw_slides(docx_path: Path) -> dict:
             current_slide.quiz_questions = quiz_questions
             current_slide.quiz_type = "mcq"
 
-        print(current_slide)
-        slides.append(current_slide)
+        # print(current_slide)
+        # slides.append(current_slide)
+
+        for s in slides:
+            if s.slide_type == "engage2":
+                print("\n========================")
+                print("ID:", s.slide_id)
+                print("HEADER:", s.header)
+                print("INTRO:", s.engage2_intro)
+                print("LAYERS:", len(s.engage2_layers or []))
+                print("========================")
 
     return {
         "module_title": metadata["module_title"],

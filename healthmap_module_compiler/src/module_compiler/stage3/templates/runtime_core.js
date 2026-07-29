@@ -349,6 +349,24 @@ function setupNavigation() {
 
       const slide = RuntimeState.slides[RuntimeState.currentIndex];
 
+      // Prevent skipping unfinished Engage 2
+      if (slide?.type === "engage_2") {
+
+        const engage =
+          RuntimeState.engageState?.[RuntimeState.currentIndex];
+
+        if (!engage?.completed) {
+
+          showToast(
+            "Please complete this activity before moving to the next slide."
+          );
+
+          return;
+
+        }
+
+      }
+
       // Prevent skipping unanswered FINAL quiz questions
       if (slide?.type === "quiz" && (slide.quiz_scope || "inline") === "final") {
 
@@ -706,13 +724,18 @@ async function renderContentBlock({
   textArray = [],
   imageSrc = null,
   alt = "",
-  panelPdf = null
+  panelPdf = null,
+  imagePosition = "right"
 }) {
   console.log("🚨 NEW renderContentBlock version running");
   console.log("🚨 TEST CHANGE WORKED");
   // 🔥 OUTER CONTAINER (THIS controls layout)
   const container = document.createElement("div");
   container.className = "panel-content";
+
+  if (imagePosition === "left") {
+    container.classList.add("image-left");
+  }
 
   // -------------------------
   // RESOURCE BUTTONS (SHARED DATA SOURCE)
@@ -807,26 +830,6 @@ async function renderContentBlock({
           ? item.modifiers
           : [];
 
-        if (
-          panelPdf &&
-          Array.isArray(paragraphModifiers) &&
-          paragraphModifiers.includes("italic")
-        ) {
-
-          const link = document.createElement("a");
-
-          link.href = `assets/resources/${panelPdf}`;
-          link.textContent = panelPdf.replace(/\.pdf$/i, "");
-          link.target = "_blank";
-
-          link.style.display = "inline-block";
-          link.style.marginTop = "0.35rem";
-          link.style.fontSize = "0.95rem";
-
-          p.appendChild(document.createElement("br"));
-          p.appendChild(link);
-        }
-
         // -------------------------
         // MODIFIERS
         // -------------------------
@@ -842,6 +845,10 @@ async function renderContentBlock({
 
           if (paragraphModifiers.includes("blue")) {
             p.classList.add("blue-text");
+          }
+
+          if (paragraphModifiers.includes("red")) {
+            p.classList.add("red-text");
           }
 
           if (paragraphModifiers.includes("center")) {
@@ -869,6 +876,25 @@ async function renderContentBlock({
         textWrapper.appendChild(ul);
       }
     });
+
+    // -------------------------
+    // PDF LINK
+    // -------------------------
+
+    if (panelPdf) {
+
+      const link = document.createElement("a");
+
+      link.href = `assets/resources/${panelPdf}`;
+      link.textContent = panelPdf.replace(/\.pdf$/i, "");
+      link.target = "_blank";
+
+      link.style.display = "inline-block";
+      link.style.marginTop = "0.75rem";
+      link.style.fontSize = "0.95rem";
+
+      textWrapper.appendChild(link);
+    }
 
     textBlock.appendChild(textWrapper);
   }
@@ -978,7 +1004,8 @@ async function renderPanel(slide, container) {
     imageSrc: slide.image ? `assets/${slide.image}` : null,
     alt: slide.header || "Slide image",
     imageClass: "panel-image",
-    panelPdf: slide.panel_pdf || null
+    panelPdf: slide.panel_pdf || null,
+    imagePosition: slide.image_position || "right"
   });
 
   contentWrapper.appendChild(block);
@@ -1219,3 +1246,56 @@ document.addEventListener("DOMContentLoaded", () => {
     closeBtn.addEventListener("click", closeImageViewer);
   }
 });
+
+// -------------------------
+// Toast Notification
+// -------------------------
+
+function showToast(message, duration = 3000) {
+
+  let toast = document.getElementById("runtime-toast");
+
+  if (!toast) {
+
+    toast = document.createElement("div");
+    toast.id = "runtime-toast";
+
+    toast.style.position = "fixed";
+    toast.style.left = "50%";
+    toast.style.bottom = "90px";
+    toast.style.transform = "translateX(-50%)";
+
+    toast.style.background = "#173b67";
+    toast.style.color = "#fff";
+
+    toast.style.padding = "12px 20px";
+    toast.style.borderRadius = "8px";
+
+    toast.style.fontSize = "15px";
+    toast.style.fontWeight = "500";
+
+    toast.style.boxShadow = "0 4px 12px rgba(0,0,0,.25)";
+
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity .25s ease";
+
+    toast.style.zIndex = "9999";
+    toast.style.pointerEvents = "none";
+
+    document.body.appendChild(toast);
+
+  }
+
+  toast.textContent = message;
+
+  toast.style.opacity = "1";
+
+  clearTimeout(showToast._timer);
+
+  showToast._timer = setTimeout(() => {
+    toast.style.opacity = "0";
+  }, duration);
+
+}
+
+window.showToast = showToast;

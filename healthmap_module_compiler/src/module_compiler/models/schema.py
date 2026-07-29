@@ -38,8 +38,12 @@ class PanelSlide(BaseModel):
     type: Literal["panel"]
     header: str
     body: List[Union[str, Dict]]
+
     optional: bool = False
+
     image: Optional[str] = None
+    image_position: Literal["left", "right"] = "right"
+
     panel_pdf: Optional[str] = None
 
 
@@ -67,17 +71,18 @@ class Engage1Slide(BaseModel):
 # -------------------------
 
 class Engage2Layer(BaseModel):
-    text: str
+    body: List[Union[str, Dict]]
     image: Optional[str] = None
 
 
 class Engage2Slide(BaseModel):
     type: Literal["engage_2"]
     header: str
-    intro: str
+    intro: List[Union[str, Dict]]
     optional: bool = False
     intro_image: Optional[str] = None
     layers: List[Engage2Layer]
+    mode: Literal["build", "replace"] = "build"
     button_label: Optional[str] = Field(default="Continue")
 
 # -------------------------

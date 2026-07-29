@@ -40,6 +40,8 @@ class RawSlide(BaseModel):
     notes: Optional[str] = None
     image: Optional[str] = None
 
+    image_position: Literal["left", "right"] = "right"
+
     # panel
     body: Optional[List[Block]] = None
 
@@ -53,6 +55,7 @@ class RawSlide(BaseModel):
     engage2_intro_image: Optional[str] = None
     engage2_layers: Optional[List[Block]] = None
     engage2_button_label: Optional[str] = None
+    engage2_mode: Literal["build", "replace"] = "build"
 
     # quiz
     quiz_questions: Optional[List[RawQuizQuestion]] = None
