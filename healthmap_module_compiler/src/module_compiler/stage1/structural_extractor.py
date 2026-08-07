@@ -9,7 +9,12 @@ from docx.document import Document as _Document
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 
-from ..models.blocks import ParagraphBlock, BulletsBlock, Block
+from ..models.blocks import (
+    ParagraphBlock,
+    BulletsBlock,
+    BulletItem,
+    Block,
+)
 from ..models.raw_models import (
     RawSlide,
     RawEngage1Item,
@@ -173,7 +178,13 @@ def extract_cell_blocks(cell) -> List[Block]:
             blocks.append(
                 BulletsBlock(
                     type="bullets",
-                    items=bullet_items.copy()
+                    items=[
+                        BulletItem(
+                            text=text,
+                            modifiers=[]
+                        )
+                        for text in bullet_items
+                    ]
                 )
             )
             bullet_items = []
@@ -847,8 +858,8 @@ def extract_raw_slides(docx_path: Path) -> dict:
             current_slide.quiz_questions = quiz_questions
             current_slide.quiz_type = "mcq"
 
-        # print(current_slide)
-        # slides.append(current_slide)
+        print(current_slide)
+        slides.append(current_slide)
 
         for s in slides:
             if s.slide_type == "engage2":

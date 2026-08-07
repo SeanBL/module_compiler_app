@@ -36,7 +36,13 @@ def blocks_to_strings(blocks):
         elif block.type == "bullets":
             output.append({
                 "type": "bullets",
-                "items": block.items
+                "items": [
+                    {
+                        "text": item.text,
+                        "modifiers": item.modifiers,
+                    }
+                    for item in block.items
+                ]
             })
 
     return output
@@ -68,6 +74,7 @@ def convert_slide(raw: RawSlide):
                     label=item.label,
                     text=combined_text,
                     image=item.image,
+                    pdf=item.pdf,
                 )
             )
 
@@ -81,6 +88,7 @@ def convert_slide(raw: RawSlide):
             header=raw.header,
             intro=intro_text,
             intro_image=raw.engage1_intro_image,
+            intro_pdf=raw.engage1_intro_pdf,
             items=items,
         )
 

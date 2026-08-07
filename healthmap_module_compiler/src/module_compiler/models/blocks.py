@@ -12,7 +12,11 @@ class ParagraphBlock(BaseModel):
 
 class BulletsBlock(BaseModel):
     type: Literal["bullets"]
-    items: List[str]
+    items: List[BulletItem]
+
+class BulletItem(BaseModel):
+    text: str
+    modifiers: list[str] = []
 
 
 Block = ParagraphBlock | BulletsBlock

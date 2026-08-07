@@ -720,11 +720,71 @@ function updateNavigationUI() {
 // Shared Content Block Renderer
 // -------------------------
 
+function appendInlineStyledText(element, text = "") {
+
+  const stylePattern =
+    /\[STYLE=([^\]]+)\](.*?)\[\/STYLE\]/gi;
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = stylePattern.exec(text)) !== null) {
+
+    // Add normal text before the styled portion
+    if (match.index > lastIndex) {
+      element.appendChild(
+        document.createTextNode(
+          text.slice(lastIndex, match.index)
+        )
+      );
+    }
+
+    // Add the styled portion
+    const span = document.createElement("span");
+    span.textContent = match[2];
+
+    const modifiers = match[1]
+      .split(",")
+      .map(value => value.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (modifiers.includes("italic")) {
+      span.classList.add("italic-text");
+    }
+
+    if (modifiers.includes("bold")) {
+      span.classList.add("bold-text");
+    }
+
+    if (modifiers.includes("blue")) {
+      span.classList.add("blue-text");
+    }
+
+    if (modifiers.includes("red")) {
+      span.classList.add("red-text");
+    }
+
+    element.appendChild(span);
+
+    lastIndex = stylePattern.lastIndex;
+  }
+
+  // Add normal text after the final styled portion
+  if (lastIndex < text.length) {
+    element.appendChild(
+      document.createTextNode(
+        text.slice(lastIndex)
+      )
+    );
+  }
+}
+
 async function renderContentBlock({
   textArray = [],
   imageSrc = null,
   alt = "",
   panelPdf = null,
+  itemPdf = null,
   imagePosition = "right"
 }) {
   console.log("🚨 NEW renderContentBlock version running");
@@ -822,9 +882,14 @@ async function renderContentBlock({
         const imageOnlyCenter =
           rawText.includes("[IMAGE_ONLY_CENTER]");
 
-        p.textContent = rawText
+        const cleanText = rawText
           .replace("[IMAGE_ONLY_CENTER]", "")
           .trim();
+
+        appendInlineStyledText(
+          p,
+          cleanText
+        );
 
         const paragraphModifiers = Array.isArray(item.modifiers)
           ? item.modifiers
@@ -865,15 +930,48 @@ async function renderContentBlock({
       }
 
       else if (item.type === "bullets") {
+
         const ul = document.createElement("ul");
 
-        item.items.forEach(liText => {
+        item.items.forEach(bullet => {
+
           const li = document.createElement("li");
-          li.textContent = liText;
+
+          appendInlineStyledText(
+            li,
+            bullet.text || ""
+          );
+
+          const modifiers = Array.isArray(bullet.modifiers)
+            ? bullet.modifiers
+            : [];
+
+          if (modifiers.includes("italic")) {
+            li.classList.add("italic-text");
+          }
+
+          if (modifiers.includes("bold")) {
+            li.classList.add("bold-text");
+          }
+
+          if (modifiers.includes("blue")) {
+            li.classList.add("blue-text");
+          }
+
+          if (modifiers.includes("red")) {
+            li.classList.add("red-text");
+          }
+
+          if (modifiers.includes("center")) {
+            li.classList.add("center-text");
+          }
+
           ul.appendChild(li);
+
         });
 
         textWrapper.appendChild(ul);
+
       }
     });
 
@@ -881,12 +979,14 @@ async function renderContentBlock({
     // PDF LINK
     // -------------------------
 
-    if (panelPdf) {
+    const pdf = itemPdf || panelPdf;
+
+    if (pdf) {
 
       const link = document.createElement("a");
 
-      link.href = `assets/resources/${panelPdf}`;
-      link.textContent = panelPdf.replace(/\.pdf$/i, "");
+      link.href = `assets/resources/${pdf}`;
+      link.textContent = pdf.replace(/\.pdf$/i, "");
       link.target = "_blank";
 
       link.style.display = "inline-block";

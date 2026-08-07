@@ -48,7 +48,8 @@ function renderEngage1(slide, container) {
     const introBlock = await renderContentBlock({
       textArray: slide.intro || [],
       imageSrc: null,
-      alt: "Intro image"
+      alt: "Intro image",
+      itemPdf: slide.intro_pdf || null
     });
 
     block.appendChild(introBlock);
@@ -134,10 +135,11 @@ async function renderEngage1Item(item, contentArea) {
   block.className = "engage-content-block";
 
   const contentBlock = await renderContentBlock({
-    textArray: item.text || [],
-    imageSrc: item.image ? `assets/${item.image}` : null,
-    alt: item.label || "Item image"
-  });
+  textArray: item.text || [],
+  imageSrc: item.image ? `assets/${item.image}` : null,
+  alt: item.label || "Item image",
+  itemPdf: item.pdf || null
+});
 
   block.appendChild(contentBlock);
 

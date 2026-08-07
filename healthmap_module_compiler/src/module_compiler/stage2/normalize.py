@@ -7,7 +7,11 @@ from ..models.raw_models import (
     RawQuizQuestion,
     RawQuizOption,
 )
-from ..models.blocks import ParagraphBlock, BulletsBlock
+from ..models.blocks import (
+    ParagraphBlock,
+    BulletsBlock,
+    BulletItem,
+)
 
 import re
 
@@ -153,6 +157,38 @@ def parse_style_modifiers(text: str):
     return text, []
 
 # ==========================================================
+# Bullet Normalization Helper
+# ==========================================================
+
+def normalize_bullets(block: BulletsBlock) -> BulletsBlock:
+
+    normalized_items = []
+
+    for item in block.items:
+
+        if not item:
+            continue
+
+        text = item.text.strip()
+
+        if not text:
+            continue
+
+        text, modifiers = parse_style_modifiers(text)
+
+        normalized_items.append(
+            BulletItem(
+                text=text,
+                modifiers=modifiers
+            )
+        )
+
+    return BulletsBlock(
+        type="bullets",
+        items=normalized_items
+    )
+
+# ==========================================================
 # Panel Normalization
 # ==========================================================
 
@@ -187,19 +223,10 @@ def _normalize_panel(slide: RawSlide) -> RawSlide:
 
         # Handle BulletsBlock ✅ NEW
         elif isinstance(block, BulletsBlock):
-            items = [
-                item.strip()
-                for item in block.items
-                if item and item.strip()
-            ]
 
-            if items:
-                normalized_blocks.append(
-                    BulletsBlock(
-                        type="bullets",
-                        items=items
-                    )
-                )
+            normalized_blocks.append(
+                normalize_bullets(block)
+            )
 
         else:
             raise ValueError(
@@ -323,19 +350,118 @@ def _normalize_engage1(slide: RawSlide) -> RawSlide:
     print("Header:", slide.header)
     print("Items:", slide.engage1_items)
     items = slide.engage1_items or []
+    intro = slide.engage1_intro or []
 
     if not items:
         raise ValueError(
             f"Engage1 slide {slide.slide_id} missing items"
         )
 
+    normalized_intro = []
+    intro_pdf = None
+
+    for block in intro:
+
+        if isinstance(block, ParagraphBlock):
+
+            text = block.text.strip()
+
+            pdf_match = re.search(r"\[PDF:\s*(.*?)\]", text, re.IGNORECASE)
+
+            if pdf_match:
+                intro_pdf = pdf_match.group(1).strip()
+
+                text = re.sub(
+                    r"\[PDF:\s*.*?\]",
+                    "",
+                    text,
+                    flags=re.IGNORECASE
+                ).strip()
+
+            text, modifiers = parse_style_modifiers(text)
+
+            if text:
+                normalized_intro.append(
+                    ParagraphBlock(
+                        type="paragraph",
+                        text=text,
+                        image=block.image,
+                        modifiers=modifiers,
+                    )
+                )
+
+        elif isinstance(block, BulletsBlock):
+            normalized_intro.append(
+                normalize_bullets(block)
+            )
+
+    normalized_items = []
+
     for item in items:
+
         if not item.label:
             raise ValueError(
                 f"Engage1 slide {slide.slide_id} has unlabeled item"
             )
 
-    return slide
+        normalized_blocks = []
+        item_pdf = None
+
+        for block in item.body:
+
+            if isinstance(block, ParagraphBlock):
+
+                text = block.text.strip()
+
+                # PDF command
+                pdf_match = re.search(r"\[PDF:\s*(.*?)\]", text, re.IGNORECASE)
+
+                if pdf_match:
+                    item_pdf = pdf_match.group(1).strip()
+
+                    # Remove the PDF command from the visible text
+                    text = re.sub(
+                        r"\[PDF:\s*.*?\]",
+                        "",
+                        text,
+                        flags=re.IGNORECASE
+                    ).strip()
+
+                # STYLE command
+                text, modifiers = parse_style_modifiers(text)
+
+                if text:
+                    normalized_blocks.append(
+                        ParagraphBlock(
+                            type="paragraph",
+                            text=text,
+                            image=block.image,
+                            modifiers=modifiers,
+                        )
+                    )
+
+            elif isinstance(block, BulletsBlock):
+
+                normalized_blocks.append(
+                    normalize_bullets(block)
+                )
+
+        normalized_items.append(
+            item.model_copy(
+                update={
+                    "body": normalized_blocks,
+                    "pdf": item_pdf,
+                }
+            )
+        )
+
+    return slide.model_copy(
+        update={
+            "engage1_intro": normalized_intro,
+            "engage1_intro_pdf": intro_pdf,
+            "engage1_items": normalized_items,
+        }
+    )
 
 # ==========================================================
 # Engage2 Normalization
@@ -366,12 +492,15 @@ def _normalize_engage2(slide: RawSlide) -> RawSlide:
 
         text = block.text.strip()
 
+        text, modifiers = parse_style_modifiers(text)
+
         if text:
             normalized_intro.append(
                 ParagraphBlock(
                     type="paragraph",
                     text=text,
-                    image=block.image
+                    image=block.image,
+                    modifiers=modifiers
                 )
             )
 
@@ -385,12 +514,15 @@ def _normalize_engage2(slide: RawSlide) -> RawSlide:
 
         text = layer.text.strip()
 
+        text, modifiers = parse_style_modifiers(text)
+
         if text:
             normalized_layers.append(
                 ParagraphBlock(
                     type="paragraph",
                     text=text,
-                    image=layer.image
+                    image=layer.image,
+                    modifiers=modifiers
                 )
             )
 

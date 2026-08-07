@@ -55,6 +55,7 @@ class Engage1Item(BaseModel):
     label: str
     text: List[Union[str, Dict]]
     image: Optional[str]
+    pdf: str | None = None
 
 
 class Engage1Slide(BaseModel):
@@ -63,6 +64,7 @@ class Engage1Slide(BaseModel):
     intro: List[Union[str, Dict]]
     optional: bool = False
     intro_image: Optional[str] = None
+    intro_pdf: str | None = None
     items: List[Engage1Item]
 
 

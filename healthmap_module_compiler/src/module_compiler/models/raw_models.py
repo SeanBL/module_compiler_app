@@ -14,6 +14,7 @@ class RawEngage1Item(BaseModel):
     body: List[Block]
     image: Optional[str] = None
     notes: Optional[str] = None
+    pdf: str | None = None
 
 
 class RawQuizOption(BaseModel):
@@ -48,6 +49,7 @@ class RawSlide(BaseModel):
     # engage1
     engage1_intro: Optional[List[Block]] = None
     engage1_intro_image: Optional[str] = None
+    engage1_intro_pdf: Optional[str] = None
     engage1_items: Optional[List[RawEngage1Item]] = None
 
     # engage2
