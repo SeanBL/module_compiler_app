@@ -655,6 +655,13 @@ def extract_raw_slides(docx_path: Path) -> dict:
                 if "mode = replace" in blob:
                     current_slide.engage2_mode = "replace"
 
+                if "menu" in blob:
+                    current_slide.menu_header = True
+
+                if "menu_only" in blob:
+                    current_slide.menu_header = True
+                    current_slide.show_header = False
+
             # -----------------------------
             # ENGAGE1 PARSING (Correct Layout Handling)
             # -----------------------------

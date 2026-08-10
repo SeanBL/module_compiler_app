@@ -162,7 +162,7 @@ function getMenuSections() {
       normalized.endsWith("continue") ||
       normalized.endsWith("continued");
 
-    if (isContinuation) return;
+    if (isContinuation && !slide.menu_header) return;
 
     sections.push({
       slideIndex,
@@ -1295,6 +1295,7 @@ function renderUnknown(slide, container) {
 // -------------------------
 
 function renderHeader(slide, container) {
+  if (slide.show_header === false) return;
   if (!slide.header) return;
 
   const header = document.createElement("h2");

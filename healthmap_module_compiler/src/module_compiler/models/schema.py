@@ -37,6 +37,8 @@ class QuizSlide(BaseModel):
 class PanelSlide(BaseModel):
     type: Literal["panel"]
     header: str
+    menu_header: bool = False
+    show_header: bool = True
     body: List[Union[str, Dict]]
 
     optional: bool = False
@@ -61,6 +63,8 @@ class Engage1Item(BaseModel):
 class Engage1Slide(BaseModel):
     type: Literal["engage_1"]
     header: str
+    menu_header: bool = False
+    show_header: bool = True
     intro: List[Union[str, Dict]]
     optional: bool = False
     intro_image: Optional[str] = None
@@ -80,6 +84,8 @@ class Engage2Layer(BaseModel):
 class Engage2Slide(BaseModel):
     type: Literal["engage_2"]
     header: str
+    menu_header: bool = False
+    show_header: bool = True
     intro: List[Union[str, Dict]]
     optional: bool = False
     intro_image: Optional[str] = None
@@ -93,6 +99,8 @@ class Engage2Slide(BaseModel):
 class DecisionSlide(BaseModel):
     type: Literal["decision"]
     header: str
+    menu_header: bool = False
+    show_header: bool = True
     body: List[Union[str, Dict]]
     buttons: List[str]
     optional: bool = False

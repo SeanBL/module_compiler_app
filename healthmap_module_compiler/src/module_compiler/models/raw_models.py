@@ -34,6 +34,11 @@ class RawSlide(BaseModel):
     header: str
     slide_type: RawSlideType
 
+    # Force this slide's header into the navigation menu.
+    menu_header: bool = False
+    # Display the header on the slide itself.
+    show_header: bool = True
+
     optional: bool = False
     decision_buttons: Optional[List[str]] = None
 
