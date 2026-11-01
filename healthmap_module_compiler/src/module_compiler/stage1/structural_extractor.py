@@ -348,6 +348,7 @@ def finalize_engage2_slide(slide: RawSlide) -> None:
 def extract_raw_slides(docx_path: Path) -> dict:
     doc = Document(str(docx_path))
     metadata = extract_module_metadata(doc)
+    no_final_quiz = False
 
     if not metadata["module_title"]:
         raise ValueError("Missing 'Module title:' in Word document")
@@ -549,6 +550,11 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                 row_idx += 2
                 continue
+
+            # Module commands must be read before quiz/empty-row early exits.
+            for label, cell in zip(col_labels, row.cells):
+                if label == "notes" and "[[no_final_quiz]]" in cell.text.lower():
+                    no_final_quiz = True
 
             if current_slide is None:
                 row_idx += 1
@@ -944,6 +950,7 @@ def extract_raw_slides(docx_path: Path) -> dict:
     return {
         "module_title": metadata["module_title"],
         "module_id": metadata["module_id"],
+        "no_final_quiz": no_final_quiz,
         "slides": slides
     }
 

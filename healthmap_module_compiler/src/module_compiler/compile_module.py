@@ -90,6 +90,16 @@ def compile_module(input_path: Path, output_path: Path, build_dir: Path | None =
             f"👉 See annotated document:\n{annotated_doc_path}"
         )
 
+    no_final_quiz = stage1_output.get("no_final_quiz", False)
+    if no_final_quiz and any(
+        slide.slide_type == "quiz" and slide.quiz_scope == "final"
+        for slide in normalized_slides
+    ):
+        raise RuntimeError(
+            "[[NO_FINAL_QUIZ]] conflicts with an explicitly authored final quiz. "
+            "Remove the command or the explicit final quiz from the Word document."
+        )
+
     # Debug counts
     print(f"Stage 1 slides: {len(raw_slides)}")
     print(f"Stage 2 slides: {len(normalized_slides)}")
@@ -97,7 +107,7 @@ def compile_module(input_path: Path, output_path: Path, build_dir: Path | None =
     # Step 2.5: Build Final Quiz (merge inline → final)
     normalized_slides = build_final_quiz(
         normalized_slides,
-        include_inline=True
+        include_inline=not no_final_quiz
     )
 
     # --------------------------------------------------
