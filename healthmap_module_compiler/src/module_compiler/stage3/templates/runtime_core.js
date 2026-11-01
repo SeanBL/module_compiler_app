@@ -764,6 +764,10 @@ function appendInlineStyledText(element, text = "") {
       span.classList.add("red-text");
     }
 
+    if (modifiers.includes("green")) {
+      span.classList.add("green-text");
+    }
+
     element.appendChild(span);
 
     lastIndex = stylePattern.lastIndex;
@@ -796,6 +800,9 @@ async function renderContentBlock({
   if (imagePosition === "left") {
     container.classList.add("image-left");
   }
+
+  const imageOnlyCenter =
+    imagePosition === "center";
 
   // -------------------------
   // RESOURCE BUTTONS (SHARED DATA SOURCE)
@@ -879,7 +886,7 @@ async function renderContentBlock({
 
         const rawText = item.text || "";
 
-        const imageOnlyCenter =
+        const legacyImageOnlyCenter =
           rawText.includes("[IMAGE_ONLY_CENTER]");
 
         const cleanText = rawText
@@ -916,13 +923,17 @@ async function renderContentBlock({
             p.classList.add("red-text");
           }
 
+          if (paragraphModifiers.includes("green")) {
+            p.classList.add("green-text");
+          }
+
           if (paragraphModifiers.includes("center")) {
             p.classList.add("center-text");
           }
 
         }
 
-        if (imageOnlyCenter) {
+        if (imageOnlyCenter || legacyImageOnlyCenter) {
           textBlock.style.display = "none";
         }
 
@@ -960,6 +971,10 @@ async function renderContentBlock({
 
           if (modifiers.includes("red")) {
             li.classList.add("red-text");
+          }
+
+          if (modifiers.includes("green")) {
+            li.classList.add("green-text");
           }
 
           if (modifiers.includes("center")) {

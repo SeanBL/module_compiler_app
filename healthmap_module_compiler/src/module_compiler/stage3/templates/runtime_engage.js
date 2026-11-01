@@ -2,6 +2,92 @@
 // Engage 1 Renderer
 // -------------------------
 
+function appendExpandableImage(imageArea, img) {
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "image-wrapper";
+
+  const overlay = document.createElement("div");
+  overlay.className = "image-overlay";
+  overlay.textContent = "Tap to expand";
+
+  wrapper.addEventListener("click", () => {
+    openImageViewer(img.src);
+  });
+
+  wrapper.appendChild(img);
+  wrapper.appendChild(overlay);
+
+  imageArea.appendChild(wrapper);
+}
+
+async function renderEngageMedia(
+  imageArea,
+  mediaFile,
+  alt = "",
+  className = ""
+) {
+
+  if (!mediaFile) return;
+
+  imageArea.innerHTML = "";
+
+  const mediaSrc = `assets/${mediaFile}`;
+
+  const extension = mediaFile
+    .split(".")
+    .pop()
+    .toLowerCase();
+
+  const isVideo = ["mp4", "webm"].includes(extension);
+
+  // -------------------------
+  // VIDEO
+  // -------------------------
+
+  if (isVideo) {
+
+    const video = document.createElement("video");
+
+    video.src = mediaSrc;
+
+    video.poster =
+      mediaSrc.replace(/\.(mp4|webm)$/i, "_poster.jpg");
+
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+
+    if (className) {
+      video.className = className;
+    }
+
+    video.style.display = "block";
+    video.style.width = "100%";
+    video.style.height = "auto";
+    video.style.maxWidth = "100%";
+    video.style.maxHeight = "70vh";
+    video.style.objectFit = "contain";
+    video.style.borderRadius = "12px";
+
+    imageArea.appendChild(video);
+
+    return;
+  }
+
+  // -------------------------
+  // IMAGE
+  // -------------------------
+
+  const img = await createReadyImage(
+    mediaSrc,
+    alt,
+    className
+  );
+
+  appendExpandableImage(imageArea, img);
+}
+
 function renderEngage1(slide, container) {
   renderHeader(slide, container);
 
@@ -67,13 +153,12 @@ function renderEngage1(slide, container) {
 
     if (slide.intro_image) {
 
-      const img = await createReadyImage(
-        `assets/${slide.intro_image}`,
+      await renderEngageMedia(
+        imageArea,
+        slide.intro_image,
         "Intro image",
         "engage1-side-image"
       );
-
-      imageArea.appendChild(img);
     }
   }
 
@@ -84,7 +169,7 @@ function renderEngage1(slide, container) {
     btn.className = "engage1-btn";
 
     btn.addEventListener("click", async () => {
-      await renderEngage1Item(item, detailArea);
+      await renderEngage1Item(item, detailArea, imageArea);
 
       buttonContainer.scrollIntoView({
         behavior: "smooth",
@@ -125,7 +210,7 @@ function renderEngage1(slide, container) {
 // Render Engage1 Item Content
 // -------------------------
 
-async function renderEngage1Item(item, contentArea) {
+async function renderEngage1Item(item, contentArea, imageArea) {
   const nextContent = document.createDocumentFragment();
 
   const wrapper = document.createElement("div");
@@ -135,11 +220,11 @@ async function renderEngage1Item(item, contentArea) {
   block.className = "engage-content-block";
 
   const contentBlock = await renderContentBlock({
-  textArray: item.text || [],
-  imageSrc: item.image ? `assets/${item.image}` : null,
-  alt: item.label || "Item image",
-  itemPdf: item.pdf || null
-});
+    textArray: item.text || [],
+    imageSrc: null,
+    alt: item.label || "Item image",
+    itemPdf: item.pdf || null
+  });
 
   block.appendChild(contentBlock);
 
@@ -147,6 +232,16 @@ async function renderEngage1Item(item, contentArea) {
   nextContent.appendChild(wrapper);
 
   replaceContent(contentArea, nextContent);
+
+  if (item.image) {
+
+    await renderEngageMedia(
+      imageArea,
+      item.image,
+      item.label || "Item image",
+      "engage1-side-image"
+    );
+  }
 }
 
 // -------------------------
@@ -195,13 +290,12 @@ function renderEngage2(slide, container) {
 
     if (slide.intro_image) {
 
-      const img = await createReadyImage(
-        `assets/${slide.intro_image}`,
+      await renderEngageMedia(
+        imageArea,
+        slide.intro_image,
         "Intro image",
         "engage2-side-image"
       );
-
-      imageArea.appendChild(img);
     }
 
   }

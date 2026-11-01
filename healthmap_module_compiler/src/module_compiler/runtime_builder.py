@@ -106,13 +106,20 @@ def convert_slide(raw: RawSlide):
 
         layers = []
 
-        for block in raw.engage2_layers or []:
-          layers.append(
-            Engage2Layer(
-              body=blocks_to_strings([block]),
-              image=block.image,
+        for section in raw.engage2_layers or []:
+            layers.append(
+                Engage2Layer(
+                    body=blocks_to_strings(section),
+                    image=next(
+                        (
+                            getattr(block, "image", None)
+                            for block in section
+                            if getattr(block, "image", None)
+                        ),
+                        None
+                    ),
+                )
             )
-          )
 
         return Engage2Slide(
           type="engage_2",

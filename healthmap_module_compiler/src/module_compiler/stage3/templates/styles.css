@@ -39,7 +39,7 @@ body {
 
   --font-body: clamp(1.05rem, 3.2vw, 1.2rem);
   --font-small: clamp(0.95rem, 2.5vw, 1rem);
-  --font-title: clamp(1.5rem, 5vw, 2.2rem);
+  --font-title: clamp(1.25rem, 4vw, 1.8rem);
 
   --image-max-height-portrait: 42vh;
   --image-max-height-landscape: 65vh;
@@ -512,6 +512,10 @@ body {
 
 .red-text {
     color: #c62828;
+}
+
+.green-text {
+  color: #638C35;
 }
 
 .center-text {

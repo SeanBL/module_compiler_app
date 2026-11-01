@@ -44,7 +44,7 @@ class PanelSlide(BaseModel):
     optional: bool = False
 
     image: Optional[str] = None
-    image_position: Literal["left", "right"] = "right"
+    image_position: Literal["left", "right", "center"] = "right"
 
     panel_pdf: Optional[str] = None
 

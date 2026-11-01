@@ -286,7 +286,14 @@ def finalize_engage1_slide(slide: RawSlide, pending_button_labels: List[str]) ->
         RawEngage1Item(
             label=label,
             body=group,
-            image=None
+            image=next(
+                (
+                    getattr(block, "image", None)
+                    for block in group
+                    if getattr(block, "image", None)
+                ),
+                None
+            )
         )
         for label, group in zip(pending_button_labels, groups)
     ]
@@ -297,17 +304,23 @@ def finalize_engage1_slide(slide: RawSlide, pending_button_labels: List[str]) ->
 
 def finalize_engage2_slide(slide: RawSlide) -> None:
 
-    if not slide.body or not any(
-        isinstance(b, (ParagraphBlock, BulletsBlock))
-        for b in slide.body
+    sections = slide.body or []
+
+    if not sections or not any(
+        isinstance(block, (ParagraphBlock, BulletsBlock))
+        for section in sections
+        for block in section
     ):
         raise ValueError(
             f"Engage2 slide {slide.slide_id} has no content blocks"
         )
 
-    paragraphs = slide.body
-    intro_blocks = [paragraphs[0]]
-    layer_blocks = paragraphs[1:]
+    # First Word table row contains the introduction.
+    # All paragraphs within that row belong to the intro.
+    intro_blocks = sections[0]
+
+    # Each subsequent Word table row is one reveal layer.
+    layer_blocks = sections[1:]
 
     if not layer_blocks:
         raise ValueError(
@@ -315,7 +328,16 @@ def finalize_engage2_slide(slide: RawSlide) -> None:
         )
 
     slide.engage2_intro = intro_blocks
-    slide.engage2_intro_image = getattr(intro_blocks[0], "image", None)
+
+    slide.engage2_intro_image = next(
+        (
+            getattr(block, "image", None)
+            for block in intro_blocks
+            if getattr(block, "image", None)
+        ),
+        None
+    )
+
     slide.engage2_layers = layer_blocks
     slide.body = None
 
@@ -341,6 +363,7 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
     engage1_items: List[RawEngage1Item] = []
     pending_button_labels: List[str] = []
+    engage1_section_images: List[Optional[str]] = []
 
     quiz_questions: List[RawQuizQuestion] = []
     quiz_inline_mode = False
@@ -446,6 +469,14 @@ def extract_raw_slides(docx_path: Path) -> dict:
                         intro = sections[0]
                         groups = sections[1:]
 
+                        intro_image = (
+                            engage1_section_images[0]
+                            if engage1_section_images
+                            else None
+                        )
+
+                        group_images = engage1_section_images[1:]
+
                         if len(groups) != len(pending_button_labels):
                             raise ValueError(
                                 f"Engage1 slide {current_slide.slide_id} has {len(groups)} sections but {len(pending_button_labels)} buttons."
@@ -453,18 +484,24 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                         engage1_items = []
 
-                        for label, group in zip(pending_button_labels, groups):
+                        for index, (label, group) in enumerate(
+                            zip(pending_button_labels, groups)
+                        ):
                             engage1_items.append(
                                 RawEngage1Item(
                                     label=label,
                                     body=group,
-                                    image=None
+                                    image=(
+                                        group_images[index]
+                                        if index < len(group_images)
+                                        else None
+                                    )
                                 )
                             )
 
                         current_slide.engage1_items = engage1_items
                         current_slide.engage1_intro = intro
-                        current_slide.engage1_intro_image = getattr(intro[0], "image", None)
+                        current_slide.engage1_intro_image = intro_image
                         current_slide.body = None
 
                     if current_slide.slide_type == "engage2":
@@ -495,6 +532,7 @@ def extract_raw_slides(docx_path: Path) -> dict:
                 slide_index += 1
                 engage1_items = []
                 pending_button_labels = []
+                engage1_section_images = []
 
                 current_slide = RawSlide(
                     slide_id=f"slide_{slide_index:03d}",
@@ -651,6 +689,9 @@ def extract_raw_slides(docx_path: Path) -> dict:
                 
                 if "layout = image left" in blob:
                     current_slide.image_position = "left"
+
+                if "layout = image center" in blob:
+                    current_slide.image_position = "center"
                 
                 if "mode = replace" in blob:
                     current_slide.engage2_mode = "replace"
@@ -705,10 +746,19 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
                     if current_row_starts_numbered_section:
                         sections.append(section_blocks)
+                        engage1_section_images.append(image[0] if image else None)
+
                     elif has_numbered_sections and len(sections) > 1:
                         sections[-1].extend(section_blocks)
+
+                        # If this continuation row supplies the section's image,
+                        # preserve it for the existing section.
+                        if image and engage1_section_images:
+                            engage1_section_images[-1] = image[0]
+
                     else:
                         sections.append(section_blocks)
+                        engage1_section_images.append(image[0] if image else None)
 
                     current_slide.body = sections
 
@@ -717,29 +767,29 @@ def extract_raw_slides(docx_path: Path) -> dict:
             # -----------------------------
             if current_slide.slide_type == "engage2" and english:
 
-                blocks = current_slide.body or []
+                sections = current_slide.body or []
+                section_blocks = []
 
                 for block in english:
 
-                    # Handle ParagraphBlock
                     if isinstance(block, ParagraphBlock):
                         text = block.text.strip()
 
                         if text.lower().startswith("[button]"):
-                            button_label = text[8:].strip()
-                            current_slide.engage2_button_label = button_label
+                            current_slide.engage2_button_label = text[8:].strip()
                             continue
 
                         if image:
                             block.image = image[0]
 
-                        blocks.append(block)
+                    section_blocks.append(block)
 
-                    # Handle BulletsBlock
-                    else:
-                        blocks.append(block)
+                # Preserve each Word table row as one section.
+                # Multiple paragraphs within the same cell stay together.
+                if section_blocks:
+                    sections.append(section_blocks)
 
-                current_slide.body = blocks
+                current_slide.body = sections
 
             # -----------------------------
             # DECISION PARSING
@@ -820,6 +870,14 @@ def extract_raw_slides(docx_path: Path) -> dict:
             intro = sections[0]
             groups = sections[1:]
 
+            intro_image = (
+                engage1_section_images[0]
+                if engage1_section_images
+                else None
+            )
+
+            group_images = engage1_section_images[1:]
+
             if len(groups) != len(pending_button_labels):
                 raise ValueError(
                     f"Engage1 slide {current_slide.slide_id} has {len(groups)} sections but {len(pending_button_labels)} buttons."
@@ -827,18 +885,24 @@ def extract_raw_slides(docx_path: Path) -> dict:
 
             engage1_items = []
 
-            for label, group in zip(pending_button_labels, groups):
+            for index, (label, group) in enumerate(
+                zip(pending_button_labels, groups)
+            ):
                 engage1_items.append(
                     RawEngage1Item(
                         label=label,
                         body=group,
-                        image=None
+                        image=(
+                            group_images[index]
+                            if index < len(group_images)
+                            else None
+                        )
                     )
                 )
 
             current_slide.engage1_items = engage1_items
             current_slide.engage1_intro = intro
-            current_slide.engage1_intro_image = getattr(intro[0], "image", None)
+            current_slide.engage1_intro_image = intro_image
             current_slide.body = None
 
         if current_slide.slide_type == "engage2":

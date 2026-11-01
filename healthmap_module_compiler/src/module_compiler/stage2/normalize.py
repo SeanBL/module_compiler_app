@@ -482,49 +482,71 @@ def _normalize_engage2(slide: RawSlide) -> RawSlide:
             f"Engage2 slide {slide.slide_id} missing reveal layers"
         )
 
-    normalized_intro: List[ParagraphBlock] = []
+    # Normalize introductory paragraphs and bullets
+    normalized_intro = []
 
     for block in intro:
-        if not isinstance(block, ParagraphBlock):
+
+        if isinstance(block, ParagraphBlock):
+            text, modifiers = parse_style_modifiers(block.text.strip())
+
+            if text:
+                normalized_intro.append(
+                    ParagraphBlock(
+                        type="paragraph",
+                        text=text,
+                        image=block.image,
+                        modifiers=modifiers,
+                    )
+                )
+
+        elif isinstance(block, BulletsBlock):
+            normalized_intro.append(normalize_bullets(block))
+
+        else:
             raise ValueError(
                 f"Engage2 slide {slide.slide_id} contains invalid intro block"
             )
 
-        text = block.text.strip()
+    # Each layer is a list of blocks from one Word table row
+    normalized_layers = []
 
-        text, modifiers = parse_style_modifiers(text)
+    for layer_index, layer_blocks in enumerate(layers, start=1):
 
-        if text:
-            normalized_intro.append(
-                ParagraphBlock(
-                    type="paragraph",
-                    text=text,
-                    image=block.image,
-                    modifiers=modifiers
-                )
-            )
-
-    normalized_layers: List[ParagraphBlock] = []
-
-    for layer in layers:
-        if not isinstance(layer, ParagraphBlock):
+        if not isinstance(layer_blocks, list):
             raise ValueError(
-                f"Engage2 slide {slide.slide_id} contains invalid layer block"
+                f"Engage2 slide {slide.slide_id} layer {layer_index} "
+                f"is not a list of blocks"
             )
 
-        text = layer.text.strip()
+        normalized_blocks = []
 
-        text, modifiers = parse_style_modifiers(text)
+        for block in layer_blocks:
 
-        if text:
-            normalized_layers.append(
-                ParagraphBlock(
-                    type="paragraph",
-                    text=text,
-                    image=layer.image,
-                    modifiers=modifiers
+            if isinstance(block, ParagraphBlock):
+                text, modifiers = parse_style_modifiers(block.text.strip())
+
+                if text:
+                    normalized_blocks.append(
+                        ParagraphBlock(
+                            type="paragraph",
+                            text=text,
+                            image=block.image,
+                            modifiers=modifiers,
+                        )
+                    )
+
+            elif isinstance(block, BulletsBlock):
+                normalized_blocks.append(normalize_bullets(block))
+
+            else:
+                raise ValueError(
+                    f"Engage2 slide {slide.slide_id} layer {layer_index} "
+                    f"contains invalid block"
                 )
-            )
+
+        if normalized_blocks:
+            normalized_layers.append(normalized_blocks)
 
     if not normalized_layers:
         raise ValueError(
